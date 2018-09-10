@@ -13,10 +13,10 @@ import pickle
 #
 #---------------------------------------------------------------------------------------------------
 
-def pic_dir(owd):
+def pic_dir(owd, folder_name):
 	os.chdir(owd)
 	dir_path = os.path.dirname(os.path.realpath(__file__))
-	dir_path = dir_path + '\Picture'
+	dir_path = dir_path + '\\' + str(folder_name) + str(dict['file_name'])
 
 	if not os.path.exists(dir_path):
 		os.makedirs(dir_path)
@@ -89,7 +89,7 @@ def lets_plot(x_data, y_data, x_bg, y_bg, x_diff, y_diff, x_data1, y_data1, x_bg
 	plt.tight_layout(pad=2, w_pad=1.0, h_pad=1.0)
 
 	if gen_pic:
-		pic_dir(owd)
+		pic_dir(owd, 'Pictures_')
 		fig2.savefig('Background' + '.png')
 		plt.clf()
 	else:
@@ -167,24 +167,24 @@ else:
 	dict['data_magic']	= True																					#Check all data, and makes sure it matches in lengths and size
 	dict['save_data']	= False																					#Should save data in right format, does nothing at the moment
 	dict['calib_bg']	= True																					#If false, autoscale at qnorm
-	dict['PDF'] 		= False																					#Calculates PDF
-	dict['show_PDF'] 	= False																					#Shows PDF
-	dict['show_all']	= False																					#Shows iq, sq, fq and Gr for a specific file, pdf_file
-	dict['gen_PDF_file']= False
-	dict['gen_fq_file'] = False
-	dict['gen_iq_file'] = False
+	dict['PDF'] 		= True																					#Calculates PDF
+	dict['show_PDF'] 	= True																					#Shows PDF
+	dict['show_all']	= True																					#Shows iq, sq, fq and Gr for a specific file, pdf_file
+	dict['gen_PDF_file']= True
+	dict['gen_fq_file'] = True
+	dict['gen_iq_file'] = True
 	dict['make_cfg'] 	= False
 
 	dict['file_name'] 	= 'BA_WCl6_160_p-'																		#Starting name of files you want inported, e.g. 'BA_WCl6_200-', full name 'BA_WCl6_200-00001'.
 	dict['file_type']	= '.xy'																					#Type of file you want imported. Remember '.' in front, e.g. '.xy' 
 	dict['first_file']	= 0																						#First file, 0 = 1.
-	dict['nr_files']	= 50																					#Number of files you want to import
+	dict['nr_files']	= 701																					#Number of files you want to import
 	dict['line_skip']	= 16																					#Amount of header lines that will be skiped, 16 for .xy- and 4 for .chi-files
 
 	dict['bg_file']		= 'BA_BKG_160_p-'																		#Name of the background file. So far only possible to take one file, so full file name
 	dict['bg_type']		= '.xy'																					#Type of file you want imported. Remember '.' in front, e.g. '.xy' 
 	dict['first_bg']	= 0																						#First file, 0 = 1.
-	dict['nr_bg_files']	= 50																						#Number of files you want to import
+	dict['nr_bg_files']	= 600																					#Number of files you want to import
 	dict['bgline_skip']	= 16	
 
 	dict['sumstep'] 	= 1																						#Summing files to increase intensity. If = 1, then no summation will be done																					
@@ -204,8 +204,8 @@ else:
 	dict['save_pics'] 	= True
 	dict['PDF_name']	= 'WCl6_160_p'
 
-	save_dict 	= False
-	dict_name = 'Dictionary_file'
+	save_dict 			= True
+	dict_name 			= str(dict[file_name]) + 'dict'
 
 #---------------------------------------------------------------------------------------------------
 #	
@@ -214,21 +214,21 @@ else:
 #--------------------------------------------------------------------------------------------------- 
 
 if dict['make_cfg'] and load_dict == False:
-	cfg_name = 'pdfgetx3_new'
+	cfg_name    = 'pdfgetx3_new'
 
-	dataformat = 'QA'
+	dataformat  = 'QA'
 	outputtypes = 'iq, sq, fq, gr'
 	composition = 'W Cl6'
 
-	qmaxinst =19.0
-	qmin =0.8
-	qmax =15.0
+	qmaxinst    = 19.0
+	qmin 		= 0.8
+	qmax 		= 15.0
 
-	rmin =0.0
-	rmax =30.0
-	rstep =0.01
+	rmin 		= 0.0
+	rmax 		= 30.0
+	rstep 		= 0.01
 
-	rpoly =0.9
+	rpoly 		= 0.9
 
 #---------------------------------------------------------------------------------------------------
 #	
@@ -353,7 +353,7 @@ if dict['nr_files'] > dict['nr_bg_files']:																			#If there are less 
 	add_bgy = np.reshape(add_bgy, (1, dict['steps']))
 
 	print '\n', 'Extending background matrix:'
-	for i in tqdm(range(dict['nr_files'] - dict['nr_bg_files)'])):
+	for i in tqdm(range(dict['nr_files'] - dict['nr_bg_files'])):
 		ybg_set = np.concatenate((ybg_set, add_bgy), axis = 0)
 
 #---------------------------------------------------------------------------------------------------
@@ -493,18 +493,21 @@ if dict['PDF']:
 
 	if dict['gen_PDF_file']:
 		print "Generating G(r) files!"
-		for i in tqdm(range(nr_files)):
-			np.savetxt(file_name + str(i).zfill(3) +'.gr',np.column_stack((r[i],gr[i])))
+		pic_dir(owd, 'Gr_')
+		for i in tqdm(range(dict['nr_files'])):
+			np.savetxt(dict['file_name'] + str(i).zfill(3) +'.gr',np.column_stack((r[i],gr[i])))
 
 	if dict['gen_fq_file']:
 		print "Generating F(q) files!"
-		for i in tqdm(range(nr_files)):
-			np.savetxt(file_name + str(i).zfill(3) +'.fq',np.column_stack((q_fq[i],fq[i])))
+		pic_dir(owd, 'Fq_')
+		for i in tqdm(range(dict['nr_files'])):
+			np.savetxt(dict['file_name'] + str(i).zfill(3) +'.fq',np.column_stack((q_fq[i],fq[i])))
 
 	if dict['gen_iq_file']:
 		print "Generating I(q) files!"
-		for i in tqdm(range(nr_files)):
-			np.savetxt(file_name + str(i).zfill(3) +'.iq',np.column_stack((q_iq[i],iq[i])))			
+		pic_dir(owd, 'Iq_')
+		for i in tqdm(range(dict['nr_files'])):
+			np.savetxt(dict['file_name'] + str(i).zfill(3) +'.iq',np.column_stack((q_iq[i],iq[i])))			
 
 	timeresolved = range(len(y_diff))
 	timeresolved_q = range(len(fq))
@@ -536,7 +539,7 @@ if dict['PDF']:
 	fig.subplots_adjust(hspace=0.65)
 
 	if dict['save_pics']:
-		pic_dir(owd)
+		pic_dir(owd, 'Pictures_')
 		fig.savefig(dict['PDF_name'] + '.png')
 		plt.clf()
 	else:
@@ -557,7 +560,7 @@ if dict['PDF']:
 		ax1.legend(loc='best', fontsize = 13)
 
 		if dict['save_pics']:
-			pic_dir(owd)
+			pic_dir(owd, 'Pictures_')
 			fig1.savefig('Single_PDF' + '.png')
 			plt.clf()
 		else:
@@ -608,7 +611,7 @@ if dict['PDF']:
 		plt.tight_layout(pad=2, w_pad=1.0, h_pad=1.0)		
 		
 		if dict['save_pics']:
-			pic_dir(owd)
+			pic_dir(owd, 'Pictures_')
 			fig2.savefig('All' + '.png')
 			plt.clf()
 		else:
@@ -618,6 +621,7 @@ if dict['PDF']:
 			plt.close()
 
 if save_dict:
+	pic_dir(owd, 'Pictures_')
 	pickle.dump(dict, open(dict_name + ".p", "wb" ))
 
 '''
