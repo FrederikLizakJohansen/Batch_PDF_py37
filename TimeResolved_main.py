@@ -1,11 +1,28 @@
+"""
+TimeResolved_main.py
+
+Definition of the script. What does it do
+
+Please see
+  Github: https://github.com/EmilSkaaning 
+  ----------------------------------------------------------------------
+  Author:       Emil Thyge Skaaning Kjaer (rsz113@alumni.ku.dk)
+  Supervisor:   Kirsten M. OE. Jensen
+  Department:   Nanoscience Center and Department of Chemistry
+  Institute:    University of Copenhagen
+  Date:         11/09/2018
+  ----------------------------------------------------------------------
+"""
 import numpy as np
-from diffpy.pdfgetx import PDFGetter, loadPDFConfig, findfiles
 import matplotlib.pyplot as plt
 import os
 import time
-from tqdm import tqdm
 import errno
 import pickle
+import ConfigParser
+from prompter import yesno
+from tqdm import tqdm
+from diffpy.pdfgetx import PDFGetter, loadPDFConfig, findfiles
 
 #---------------------------------------------------------------------------------------------------
 #	
@@ -14,8 +31,17 @@ import pickle
 #---------------------------------------------------------------------------------------------------
 
 def pic_dir(owd, folder_name):
-	os.chdir(owd)
-	dir_path = os.path.dirname(os.path.realpath(__file__))
+	""" 
+	pic_dir takes two inputs:
+		owd, is the directory where the script is.
+		folder_name, is the name of the folder where the files will be put.
+
+	If a folder with folder_name does not exist, then a new folder will be made.
+	The function than changes the directory.
+	"""
+	os.chdir(owd)  # Goes back to the directory where the script is
+	#dir_path = os.path.dirname(os.path.realpath(__file__))  # Ta
+	dir_path = owd
 	dir_path = dir_path + '\\' + str(folder_name) + str(dict['file_name'])
 
 	if not os.path.exists(dir_path):
@@ -24,6 +50,9 @@ def pic_dir(owd, folder_name):
 	os.chdir(dir_path)
 
 def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip):
+	"""
+
+	"""
 	x_values = []
 	y_values = []
 	min_val	 = []
@@ -31,9 +60,9 @@ def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip):
 	dim = 1
 	lendat1 = 0
 
-	print '\n', 'Loading files:'
+	print 'Loading files:'
 	for i in tqdm(range(frame_sumstart, nr_files)):
-		frame = file_name + str.zfill(str(i+1), 5) + file_type
+		frame = file_name + str.zfill(str(i+1), 5) + str(file_type)
 		frame_data = np.loadtxt(frame, skiprows = line_skip)
 		x_values.append(frame_data[:,0])
 		y_values.append(frame_data[:,1])
@@ -132,12 +161,25 @@ def sum_data(nr_sum, sumstep, data):
 
 #---------------------------------------------------------------------------------------------------
 #	
-# Dictionary
+# Config file and Dictionary
 #
 #---------------------------------------------------------------------------------------------------
 
-load_dict = False
-imp_dict = 'Dictionary_file.p'
+if os.path.isfile('TimeResolved_config.ini'):
+	timeResCon = True
+	parser 	   = ConfigParser.ConfigParser()
+	parser.read('TimeResolved_config.ini')
+	load_dict  = parser.getboolean('Dictionary', 'load_dict')
+	imp_dict   = parser.get('Dictionary', 'imp_dict')
+else:
+	load_dict  = False
+	timeResCon = False
+	imp_dict   = 'XXX_directory.py'
+	print "No TimeResolved_config.ini exists!"
+	if load_dict:
+		print 'Script is using an imported dictionary!'
+	else:
+		print 'Neither a config file og dictionary was imported. Script should be setup in main code!!!'
 
 #---------------------------------------------------------------------------------------------------
 #	
@@ -146,66 +188,167 @@ imp_dict = 'Dictionary_file.p'
 #--------------------------------------------------------------------------------------------------- 
 
 if load_dict:
-	dict = pickle.load(open( imp_dict, "rb" ))
-
+	dict = pickle.load(open(imp_dict, "rb"))
 	print '\n' + 'Printing values for imported Dictionary: ' + '\n'
 
-	for name in dict : 
-		if type(name) == str:
-	 		print '{0:15s} {1}'.format(name, dict[name])
-	 	else:
-	 		print '{0:15s} {1:6}'.format(name, dict[name])
+	print '[Main]'
+	print '{0:12s} {1} {2}'.format('data_magic', '= ', dict['data_magic'])
+	print '{0:12s} {1} {2}'.format('save_data', '= ', dict['save_data'])
+	print '{0:12s} {1} {2}'.format('PDF', '= ', dict['PDF'])
+	print '{0:12s} {1} {2}'.format('gen_PDF_file', '= ', dict['gen_PDF_file'])
+	print '{0:12s} {1} {2}'.format('gen_fq_file', '= ', dict['gen_fq_file'])
+	print '{0:12s} {1} {2}'.format('gen_iq_file', '= ', dict['gen_iq_file'])
 
-	raw_input("\n" + "Press Enter to verify inported Directory...")
-	print "Imported Dictionary has been verfied. Proceeding!"	
+	print '\n[Data]'
+	print '{0:12s} {1} {2}'.format('file_name', '= ', dict['file_name'])
+	print '{0:12s} {1} {2}'.format('file_type', '= ', dict['file_type'])
+	print '{0:12s} {1} {2}'.format('first_file', '= ', dict['first_file'])
+	print '{0:12s} {1} {2}'.format('nr_files', '= ', dict['nr_files'])
+	print '{0:12s} {1} {2}'.format('line_skip', '= ', dict['line_skip'])
 
+	print '\n[Background_Data]'
+	print '{0:12s} {1} {2}'.format('bg_file', '= ', dict['bg_file'])
+	print '{0:12s} {1} {2}'.format('bg_type', '= ', dict['bg_type'])
+	print '{0:12s} {1} {2}'.format('first_bg', '= ', dict['first_bg'])
+	print '{0:12s} {1} {2}'.format('nr_bg_files', '= ', dict['nr_bg_files'])
+	print '{0:12s} {1} {2}'.format('bgline_skip', '= ', dict['bgline_skip'])
+
+	print '\n[Scaling]'
+	print '{0:12s} {1} {2}'.format('calib_bg', '= ', dict['calib_bg'])
+	print '{0:12s} {1} {2}'.format('sumstep', '= ', dict['sumstep'])
+	print '{0:12s} {1} {2}'.format('bg_scaling', '= ', dict['bg_scaling'])
+	print '{0:12s} {1} {2}'.format('qnorm', '= ', dict['qnorm'])
+
+	print '\n[Directories]'
+	print '{0:12s} {1} {2}'.format('change_dir', '= ', dict['change_dir'])
+	print '{0:12s} {1} {2}'.format('data_dir', '= ', dict['data_dir'])
+	print '{0:12s} {1} {2}'.format('bg_dir', '= ', dict['bg_dir'])
+	print '{0:12s} {1} {2}'.format('cfg_dir', '= ', dict['cfg_dir'])
+
+	print '\n[PDFgetX3]'
+	print '{0:12s} {1} {2}'.format('make_cfg', '= ', dict['make_cfg'])
+	print '{0:12s} {1} {2}'.format('cfg_file', '= ', dict['cfg_file'])
+
+	print '\n[Plotting]'
+	print '{0:12s} {1} {2}'.format('show_PDF', '= ', dict['show_PDF'])
+	print '{0:12s} {1} {2}'.format('show_all', '= ', dict['show_all'])
+	print '{0:12s} {1} {2}'.format('save_pics', '= ', dict['save_pics'])
+	print '{0:12s} {1} {2}'.format('pdf_file', '= ', dict['pdf_file'])
+	print '{0:12s} {1} {2}'.format('PDF_name', '= ', dict['PDF_name'])
+
+	print '\nThe sections [Dictionary] and [Save_Dictionary] are not stored within the Dictionary!'
+
+	yesno('Type yes to confirm Directory and no to terminate')
+
+	print "Imported Dictionary has been verfied. Proceeding!"
 	save_dict = False
+
+elif timeResCon:
+	parser = ConfigParser.ConfigParser()
+	dict = {}
+	parser.read('TimeResolved_config.ini')
+
+	# [Main]
+	dict['data_magic']	= parser.getboolean('Main', 'data_magic')
+	dict['save_data']	= parser.getboolean('Main', 'save_data')
+	dict['PDF'] 		= parser.getboolean('Main', 'PDF')
+	dict['gen_PDF_file']= parser.getboolean('Main', 'gen_PDF_file')
+	dict['gen_fq_file'] = parser.getboolean('Main', 'gen_fq_file')
+	dict['gen_iq_file'] = parser.getboolean('Main', 'gen_iq_file')
+
+	# [Data]
+	dict['file_name'] 	= parser.get('Data', 'file_name')
+	dict['file_type']	= parser.get('Data', 'file_type') 
+	dict['first_file']	= parser.getint('Data', 'first_file')
+	dict['nr_files']	= parser.getint('Data', 'nr_files')
+	dict['line_skip']	= parser.getint('Data', 'line_skip')
+
+	# [Background_data]
+	dict['bg_file']		= parser.get('Background_Data', 'bg_file')
+	dict['bg_type']		= parser.get('Background_Data', 'bg_type') 
+	dict['first_bg']	= parser.getint('Background_Data', 'first_bg')
+	dict['nr_bg_files']	= parser.getint('Background_Data', 'nr_bg_files')
+	dict['bgline_skip']	= parser.getint('Background_Data', 'bgline_skip')																																		
+
+	# [Scaling]
+	dict['calib_bg']	= parser.getboolean('Scaling', 'calib_bg')	
+	dict['sumstep'] 	= parser.getint('Scaling', 'sumstep')
+	dict['bg_scaling'] 	= parser.getfloat('Scaling', 'bg_scaling')
+	dict['qnorm'] 		= parser.get('Scaling', 'qnorm')
+
+	# [Directories]
+	dict['change_dir']	= parser.getboolean('Directories', 'change_dir')
+	dict['data_dir'] 	= parser.get('Directories', 'data_dir')										
+	dict['bg_dir']		= parser.get('Directories', 'bg_dir')
+	dict['cfg_dir']		= parser.get('Directories', 'cfg_dir')
+
+	# [PDFgetX3]
+	dict['make_cfg'] 	= parser.getboolean('PDFgetX3', 'make_cfg')
+	dict['cfg_file']	= parser.get('PDFgetX3', 'cfg_file')
+
+	# [Plotting]
+	dict['show_PDF'] 	= parser.getboolean('Plotting', 'show_PDF')
+	dict['show_all']	= parser.getboolean('Plotting', 'show_all')	
+	dict['save_pics'] 	= parser.getboolean('Plotting', 'save_pics')
+	dict['pdf_file'] 	= parser.getint('Plotting', 'pdf_file')	
+	dict['PDF_name']	= parser.get('Plotting', 'PDF_name')
+
+	# [Save_Dictionary]
+	save_dict 			= parser.getboolean('Save_Dictionary', 'save_dict')
+	dict_name 			= parser.get('Save_Dictionary', 'dict_name')
 
 else:
 	dict = {}
 
+	# [Main]
 	dict['data_magic']	= True																					#Check all data, and makes sure it matches in lengths and size
 	dict['save_data']	= False																					#Should save data in right format, does nothing at the moment
-	dict['calib_bg']	= True																					#If false, autoscale at qnorm
 	dict['PDF'] 		= True																					#Calculates PDF
-	dict['show_PDF'] 	= True																					#Shows PDF
-	dict['show_all']	= True																					#Shows iq, sq, fq and Gr for a specific file, pdf_file
 	dict['gen_PDF_file']= True
 	dict['gen_fq_file'] = True
 	dict['gen_iq_file'] = True
-	dict['make_cfg'] 	= False
 
+	# [Data]
 	dict['file_name'] 	= 'BA_WCl6_160_p-'																		#Starting name of files you want inported, e.g. 'BA_WCl6_200-', full name 'BA_WCl6_200-00001'.
 	dict['file_type']	= '.xy'																					#Type of file you want imported. Remember '.' in front, e.g. '.xy' 
 	dict['first_file']	= 0																						#First file, 0 = 1.
-	dict['nr_files']	= 701																					#Number of files you want to import
+	dict['nr_files']	= 6																					#Number of files you want to import
 	dict['line_skip']	= 16																					#Amount of header lines that will be skiped, 16 for .xy- and 4 for .chi-files
 
+	# [Background_Data]
 	dict['bg_file']		= 'BA_BKG_160_p-'																		#Name of the background file. So far only possible to take one file, so full file name
 	dict['bg_type']		= '.xy'																					#Type of file you want imported. Remember '.' in front, e.g. '.xy' 
 	dict['first_bg']	= 0																						#First file, 0 = 1.
-	dict['nr_bg_files']	= 600																					#Number of files you want to import
+	dict['nr_bg_files']	= 3																					#Number of files you want to import
 	dict['bgline_skip']	= 16	
 
-	dict['sumstep'] 	= 1																						#Summing files to increase intensity. If = 1, then no summation will be done																					
 
+	#[Scaling]
+	dict['calib_bg']	= True																					#If false, autoscale at qnorm	
+	dict['sumstep'] 	= 1																						#Summing files to increase intensity. If = 1, then no summation will be done																					
 	dict['bg_scaling'] 	= 0.98																					#Constant scaling of bagground
 	dict['qnorm'] 		= 22																					#Define the point in q, where the background should line up with the data
 
-	dict['pdf_file'] 	= -1																					#Show the pdf of a specific file
-
+	# [Directories]
 	dict['change_dir']	= True 																					#True if you want to change directory
-	dict['data_dir'] 	= 'C:\Users\opadn\Documents\Skolefiler\KU_Nanoscience\Kandidat\Masters\Data WO\BA_WCl6_160_p'	#Insert path to a new directory										
-	dict['bg_dir']		= 'C:\Users\opadn\Documents\Skolefiler\KU_Nanoscience\Kandidat\Masters\Data WO\BA_BKG_160_p'
+	dict['data_dir'] 	= 'C:\\Users\\opadn\\Documents\\Skolefiler\\KU_Nanoscience\\Kandidat\\Masters\\Data_WO\\BA_WCl6_160_p'	#Insert path to a new directory										
+	dict['bg_dir']		= 'C:\Users\opadn\Documents\Skolefiler\KU_Nanoscience\Kandidat\Masters\Data_WO\BA_BKG_160_p'
 	dict['cfg_dir']		= 'C:\Users\opadn\Documents\Skolefiler\KU_Nanoscience\Kandidat\Masters\TimeResolved_scripts'
 
-	dict['cfg_file']	= 'pdfgetx31.cfg'
+	# [PDFgetX3]
+	dict['make_cfg'] 	= False
+	dict['cfg_file']	= 'pdfgetx3.cfg'
 
+	# [Plotting]
+	dict['show_PDF'] 	= True																					#Shows PDF
+	dict['show_all']	= True																					#Shows iq, sq, fq and Gr for a specific file, pdf_file
 	dict['save_pics'] 	= True
+	dict['pdf_file'] 	= -1																					#Show the pdf of a specific file		
 	dict['PDF_name']	= 'WCl6_160_p'
 
+	# [Save_Dictionary]
 	save_dict 			= True
-	dict_name 			= str(dict[file_name]) + 'dict'
+	dict_name 			= str(XXX_directory)
 
 #---------------------------------------------------------------------------------------------------
 #	
@@ -246,22 +389,22 @@ owd = os.getcwd()
 
 if dict['change_dir']:
 	os.chdir(dict['data_dir'])
-	print 'Directory has been changed:'
+	print '\nDirectory has been changed:'
 	print os.getcwd()
 
 xdata_set, ydata_set, data_dim, min_val_data, max_val_data, data_len = read_data(dict['first_file'], dict['nr_files'], dict['file_name'], dict['file_type'], dict['line_skip'])
 
 if dict['change_dir']:
 	os.chdir(dict['bg_dir'])
-	print 'Directory has been changed:'
+	print '\nDirectory has been changed:'
 	print os.getcwd()
 
 xbg_set, ybg_set, bg_dim, min_val_bg, max_val_bg, bg_len = read_data(dict['first_bg'], dict['nr_bg_files'], dict['bg_file'], dict['bg_type'], dict['bgline_skip'])	
 
 if bg_len >= data_len:
-	dict['steps'] = bg_len * 2
+	steps = bg_len * 2
 else:
-	dict['steps'] = data_len * 2
+	steps = data_len * 2
 
 if dict['data_magic']:																						#Find highest min value and lowest max value for interpolation
 	xmin = 0
@@ -277,19 +420,19 @@ if dict['data_magic']:																						#Find highest min value and lowest m
 	else:
 		xmax = max_val_bg	
 
-	ydata_set_int = np.zeros((dict['nr_files'], dict['steps']))
-	ybg_set_int = np.zeros((dict['nr_bg_files'], dict['steps']))
+	ydata_set_int = np.zeros((dict['nr_files'], steps))
+	ybg_set_int = np.zeros((dict['nr_bg_files'], steps))
 
 	if data_dim == 0 and bg_dim == 1:
 		print '\n', 'Background files vary in length.'
 		print 'Interpolating data files:'
 		for i in tqdm(range(0, dict['nr_files'] - dict['first_file'])):
-			xdata_set_int, y_int = interpol(xmin, xmax, dict['steps'], xdata_set, ydata_set[i])
+			xdata_set_int, y_int = interpol(xmin, xmax, steps, xdata_set, ydata_set[i])
 			ydata_set_int[i] = y_int
 
 		print 'Interpolating background files:'
 		for i in tqdm(range(0, dict['nr_bg_files'] - dict['first_bg'])):	
-			_, ybg_int = interpol(xmin, xmax, dict['steps'], xbg_set[i], ybg_set[i])
+			_, ybg_int = interpol(xmin, xmax, steps, xbg_set[i], ybg_set[i])
 			ybg_set_int[i] = ybg_int
 
 		xdata_set = xdata_set_int
@@ -301,12 +444,12 @@ if dict['data_magic']:																						#Find highest min value and lowest m
 		print '\n', 'Data files vary in length.'
 		print 'Interpolating data files:'
 		for i in tqdm(range(0, dict['nr_files'] - dict['first_file'])):
-			xdata_set_int, y_int = interpol(xmin, xmax, dict['steps'], xdata_set[i], ydata_set[i])
+			xdata_set_int, y_int = interpol(xmin, xmax, steps, xdata_set[i], ydata_set[i])
 			ydata_set_int[i] = y_int
 
 		print 'Interpolating background files:'
 		for i in tqdm(range(0, dict['nr_bg_files'] - dict['first_bg'])):	
-			_, ybg_int = interpol(xmin, xmax, dict['steps'], xbg_set, ybg_set[i])
+			_, ybg_int = interpol(xmin, xmax, steps, xbg_set, ybg_set[i])
 			ybg_set_int[i] = ybg_int
 
 		xdata_set = xdata_set_int
@@ -315,15 +458,15 @@ if dict['data_magic']:																						#Find highest min value and lowest m
 		ybg_set = ybg_set_int 
 
 	elif data_dim == 1 and bg_dim == 1:
-		print '\n', 'Both data files and background files vary in length.'
+		print '\n', 'Size of data and background array does not match.'
 		print 'Interpolating data files:'
 		for i in tqdm(range(0, dict['nr_files'] - dict['first_file'])):
-			xdata_set_int, y_int = interpol(xmin, xmax, dict['steps'], xdata_set[i], ydata_set[i])
+			xdata_set_int, y_int = interpol(xmin, xmax, steps, xdata_set[i], ydata_set[i])
 			ydata_set_int[i] = y_int
 
 		print 'Interpolating bachground files:'
 		for i in tqdm(range(0, dict['nr_bg_files'] - dict['first_bg'])):	
-			_, ybg_int = interpol(xmin, xmax, dict['steps'], xbg_set[i], ybg_set[i])
+			_, ybg_int = interpol(xmin, xmax, steps, xbg_set[i], ybg_set[i])
 			ybg_set_int[i] = ybg_int
 
 		xdata_set = xdata_set_int
@@ -346,11 +489,11 @@ if dict['sumstep'] > 1:
 	dict['nr_files'] = (dict['nr_files']/dict['sumstep'])+1
 	dict['nr_bg_files'] = (dict['nr_bg_files']/dict['sumstep'])+1
 
-ybg_set = np.reshape(ybg_set, (dict['nr_bg_files'], dict['steps']))
+ybg_set = np.reshape(ybg_set, (dict['nr_bg_files'], steps))
 
 if dict['nr_files'] > dict['nr_bg_files']:																			#If there are less background files the data files exstend bg matrix with last background row til they match
 	add_bgy = ybg_set[-1]
-	add_bgy = np.reshape(add_bgy, (1, dict['steps']))
+	add_bgy = np.reshape(add_bgy, (1, steps))
 
 	print '\n', 'Extending background matrix:'
 	for i in tqdm(range(dict['nr_files'] - dict['nr_bg_files'])):
@@ -365,19 +508,9 @@ if dict['nr_files'] > dict['nr_bg_files']:																			#If there are less 
 if dict['calib_bg']:
 	scaled_bg = (ybg_set[:] * dict['bg_scaling'])
 	y_diff = ydata_set[:] - scaled_bg
+	y_diff = np.array(y_diff)
 	n = 0
 
-#	for i in range(dict['nr_files']):
-#		while any(t < 0 for t in y_diff[i]): 
-#			if n%10 == 0: 
-#				print 'WARNING!!! Subtracted data contains negative values!!!'
-#				print 'Modifying scalefactor'
-#			dict['bg_scaling'] -= 0.01
-#			scaled_bg = (ybg_set[:] * dict['bg_scaling'])
-#			y_diff = ydata_set[:] - scaled_bg
-#			n+=1
-#
-#	print "Final scal factor = " + str(dict['bg_scaling'])
 	for i in range(dict['nr_files']):
 		if n < 3 and any(t < 0 for t in y_diff[i]): 
 			print('WARNING!!! Subtracted data contains negative values!!!')
@@ -444,7 +577,7 @@ if dict['PDF']:
 		cfg = loadPDFConfig(cfg_name + '.cfg')
 	else:
 		os.chdir(dict['cfg_dir'])
-		print 'Directory has been changed:'
+		print '\nDirectory has been changed:'
 		print os.getcwd()
 
 		cfg = loadPDFConfig(dict['cfg_file'])	
@@ -622,19 +755,4 @@ if dict['PDF']:
 
 if save_dict:
 	pic_dir(owd, 'Pictures_')
-	pickle.dump(dict, open(dict_name + ".p", "wb" ))
-
-'''
-IMPROVEMENTS
-
- * Save interpolated data.
-
- * Implement dictionary.
-    - Should be implemented, test for bugges.
-    - Find a good way to sort the dictionary.
-
- * Automatize data_magic.
-
- * Prevent background subtraction for returning negative values.
-
-'''	
+	pickle.dump(dict, open(dict_name + ".py", "wb" ))

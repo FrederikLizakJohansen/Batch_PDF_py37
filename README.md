@@ -20,10 +20,6 @@ The script consists of multiple part.
 
  * Save interpolated data.
 
- * Implement dictionary.
-    - Should be implemented, test for bugges.
-    - Find a good way to sort the dictionary.
-
  * Automatize data_magic.
 
  * Prevent background subtraction for returning negative values.
