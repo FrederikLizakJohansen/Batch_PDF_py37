@@ -20,7 +20,15 @@ The script consists of multiple part.
 
  * Save interpolated data.
 
+   * Implement HDF5 to save data.
+
  * Automatize data_magic.
 
  * Prevent background subtraction for returning negative values.
+
+# BUGS
+
+ * Sum doesn't work properbly
+
+ * when all bg and data is the same, but bg and data differ in length
 
