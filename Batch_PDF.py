@@ -35,6 +35,10 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 #
 #---------------------------------------------------------------------------------------------------
 
+def fields_view(arr, fields):
+    dtype2 = np.dtype({name:arr.dtype.fields[name] for name in fields})
+    return np.ndarray(arr.shape, dtype2, arr, 0, arr.strides)
+
 def neg_check(mat, start, owd, gen_pic, totime):
     neg_files = []
     neg_vals  = []
@@ -432,29 +436,6 @@ else:
 
 #---------------------------------------------------------------------------------------------------
 #   
-# Create cfg file
-#
-#--------------------------------------------------------------------------------------------------- 
-
-if dict['make_cfg'] and load_dict == False:
-    cfg_name    = 'pdfgetx3_new'
-
-    dataformat  = 'QA'
-    outputtypes = 'iq, sq, fq, gr'
-    composition = 'W Cl6'
-
-    qmaxinst    = 19.0
-    qmin        = 0.8
-    qmax        = 15.0
-
-    rmin        = 0.0
-    rmax        = 30.0
-    rstep       = 0.01
-
-    rpoly       = 0.9
-
-#---------------------------------------------------------------------------------------------------
-#   
 # Code
 #
 #--------------------------------------------------------------------------------------------------- 
@@ -468,7 +449,8 @@ totime = dict['timeframe']/60
 #
 #---------------------------------------------------------------------------------------------------
 
-if dict['load_data']:
+if dict['load_data'] == False:
+    print 'Loading HDF5 files:'
     pic_dir(dict['cfg_dir'], 'data_binary_')
     
     hdf5_file = h5py.File('raw_data.hdf5', 'r')
@@ -486,6 +468,7 @@ if dict['load_data']:
     same_len = 0
 
 else:
+    print 'Initilazing import of files!'
     if dict['change_dir']:
         os.chdir(dict['data_dir'])
         print '\nDirectory has been changed:'
@@ -531,36 +514,36 @@ if dict['data_magic']:                                                          
     if data_dim == 0 and bg_dim == 1:
         print '\n', 'Background files vary in length.'
         print 'Interpolating data files:'
-        for i in tqdm(range(0, dict['nr_files'] - dict['first_file'])):
+        for i in tqdm(range(0, abs(dict['nr_files'] - dict['first_file']))):
             xdata_set_int, y_int = interpol(xmin, xmax, steps, xdata_set, ydata_set[i])
             ydata_set_int[i] = y_int
 
         print 'Interpolating background files:'
-        for i in tqdm(range(0, dict['nr_bg_files'] - dict['first_bg'])):    
+        for i in tqdm(range(0, abs(dict['nr_bg_files'] - dict['first_bg']))):    
             _, ybg_int = interpol(xmin, xmax, steps, xbg_set[i], ybg_set[i])
             ybg_set_int[i] = ybg_int
 
     elif data_dim == 1 and bg_dim == 0:
         print '\n', 'Data files vary in length.'
         print 'Interpolating data files:'
-        for i in tqdm(range(0, dict['nr_files'] - dict['first_file'])):
+        for i in tqdm(range(0, abs(dict['nr_files'] - dict['first_file']))):
             xdata_set_int, y_int = interpol(xmin, xmax, steps, xdata_set[i], ydata_set[i])
             ydata_set_int[i] = y_int
 
         print 'Interpolating background files:'
-        for i in tqdm(range(0, dict['nr_bg_files'] - dict['first_bg'])):    
+        for i in tqdm(range(0, abs(dict['nr_bg_files'] - dict['first_bg']))):    
             _, ybg_int = interpol(xmin, xmax, steps, xbg_set, ybg_set[i])
             ybg_set_int[i] = ybg_int
 
     elif data_dim == 1 and bg_dim == 1:
         print '\n', 'Size of data and background array does not match.'
         print 'Interpolating data files:'
-        for i in tqdm(range(0, dict['nr_files'] - dict['first_file'])):
+        for i in tqdm(range(0, abs(dict['nr_files'] - dict['first_file']))):
             xdata_set_int, y_int = interpol(xmin, xmax, steps, xdata_set[i], ydata_set[i])
             ydata_set_int[i] = y_int
 
         print 'Interpolating bachground files:'
-        for i in tqdm(range(0, dict['nr_bg_files'] - dict['first_bg'])):    
+        for i in tqdm(range(0, abs(dict['nr_bg_files'] - dict['first_bg']))):    
             _, ybg_int = interpol(xmin, xmax, steps, xbg_set[i], ybg_set[i])
             ybg_set_int[i] = ybg_int
 
@@ -578,12 +561,13 @@ if dict['data_magic']:                                                          
         else:
             print 'Data got same length but different x values.'
             print 'Data will be interpolated to have same x values.'
-            for i in tqdm(range(0, (dict['nr_files'] - dict['first_file'])+1)):
+            for i in tqdm(range(0, abs(dict['nr_files'] - dict['first_file']))):
+                print 'jiiii'
                 xdata_set_int, y_int = interpol(xmin, xmax, steps, xdata_set, ydata_set[i])
                 ydata_set_int[i] = y_int
 
             print 'Interpolating background files:'
-            for i in tqdm(range(0, (dict['nr_bg_files'] - dict['first_bg'])+1)):    
+            for i in tqdm(range(0, abs(dict['nr_bg_files'] - dict['first_bg']))):    
                 _, ybg_int = interpol(xmin, xmax, steps, xbg_set, ybg_set[i])
                 ybg_set_int[i] = ybg_int
 
@@ -606,7 +590,7 @@ if dict['nr_files'] > dict['nr_bg_files']:                                      
     add_bgy = np.reshape(add_bgy, (1, steps))
 
     print '\n', 'Extending background matrix:'
-    for i in tqdm(range(dict['nr_files'] - dict['nr_bg_files'])):
+    for i in tqdm(range(abs(dict['nr_files'] - dict['nr_bg_files']))):
         ybg_set = np.concatenate((ybg_set, add_bgy), axis = 0)
  
 if dict['save_data']:
@@ -629,7 +613,25 @@ if dict['save_data']:
 #
 #---------------------------------------------------------------------------------------------------
 
-if dict['make_cfg']:
+if dict['make_cfg'] and dict['load_dict'] == False:
+    # Values for autogen sfg
+    cfg_name    = 'pdfgetx3_new'
+
+    dataformat  = 'QA'
+    outputtypes = 'iq, sq, fq, gr'
+    composition = 'W Cl6'
+
+    qmaxinst    = 19.0
+    qmin        = 0.8
+    qmax        = 15.0
+
+    rmin        = 0.0
+    rmax        = 30.0
+    rstep       = 0.01
+
+    rpoly = 0.9
+    
+    print 'New cfg file is being constructed'
     os.chdir(dict['cfg_dir'])
     print '\nDirectory has been changed:'
     print os.getcwd()
@@ -638,6 +640,8 @@ if dict['make_cfg']:
     DAT =  np.column_stack((NAMES, FLOATS))
     np.savetxt(cfg_name + '.cfg', DAT, delimiter=" = ", fmt="%s") 
     cfg = loadPDFConfig(cfg_name + '.cfg')
+    th_q_low  = cfg.qmin * 10
+    th_q_high = cfg.qmax * 10
 
 elif dict['PDF']:
     os.chdir(dict['cfg_dir'])
@@ -645,8 +649,8 @@ elif dict['PDF']:
     print os.getcwd()
 
     cfg = loadPDFConfig(dict['cfg_file'])
-    th_q_low  = cfg.rmin * 10
-    th_q_high = cfg.rmax * 10
+    th_q_low  = cfg.qmin * 10
+    th_q_high = cfg.qmax * 10
 else:
     print 'Lowest q (in AA) value that will be tested for negative values:'
     while True:
@@ -671,46 +675,111 @@ else:
 #---------------------------------------------------------------------------------------------------
 
 if dict['calib_bg']:
-    dict['auto'] = True
-   
+
+####################
+    if dict['auto']: 
+        import heapq
+        count = 0
+        diff_ph = 0
+        scale   = []
+        #xmax, xmin = ydata_set.max(), ydata_set.min()
+        #xmax, xmin = ybg_set.max(), ybg_set.min()
+
+        #ydata_set = (ydata_set - xmin)/(xmax-xmin)
+        #ybg_set = (ybg_set - xmin)/(xmax-xmin)
+        for li1, li2 in zip(ydata_set, ybg_set):
+            diff_index_ph = []
+            diff_index_ph.append(heapq.nsmallest(len(li1), xrange(len(li1)), key=lambda i: (li1[i] - li2[i])))  # Finds index for largest difference
+            diff_index = np.array(diff_index_ph)
+            print diff_index
+            for i in range(len(diff_index)):
+                #print 'issssmand', i
+                #print th_q_low,' <= ',xdata_set[i], ' and ',  xdata_set[i],' <= ',th_q_high
+                #print (li1[diff_index[0][i]] - li2[diff_index[0][i]]), li1[diff_index[0][i]], ' - ', li2[diff_index[0][i]]  
+                if (li1[diff_index[0][i]] - li2[diff_index[0][i]]) < diff_ph and th_q_low <= xdata_set[i] and xdata_set[i] <= th_q_high:  # Update ph if new value is larger and within q range it's stored
+                    list_ind = count    
+                    index    = i
+                    a = li1[diff_index[0][i]]
+                    b = li2[diff_index[0][i]]
+
+                    diff_ph  = li1[diff_index[0][i]] - li2[diff_index[0][i]]
+                    #print 'HEEEEEEEEJ', (li1[diff_index[0][i]] - li2[diff_index[0][i]]) ,'<',  diff_ph  
+                else:
+                    continue
+            count += 1
+            del diff_index_ph[:]
+
+            scale.append(a / b) 
+            print a/b
+        #scale =  ydata_set[0][index] / ybg_set[0][index]
+        scale = np.array(scale)
+
+        scaled_bg = ybg_set.T * scale
+        scaled_bg = scaled_bg.T
+        y_diff = ydata_set[:] - scaled_bg
+        y_diff = np.array(y_diff)
+        np.set_printoptions(threshold=np.nan)
+        print  'Auto', a - b
+
+        #print y_diff 
+        #print 'index ', index,'list ', list_ind
+        print 'scale ', scale
+        plt.plot(xdata_set,ydata_set[list_ind], label='data')
+        plt.plot(xdata_set,scaled_bg[0], label='scaled bg')
+        plt.plot(xdata_set, ybg_set[0], label='bg')
+        plt.plot(xdata_set,y_diff[list_ind], label='y_diff')
+        plt.legend()
+        #plt.show()
+        #print ybg_set - scaled_bg
+        #print li1[2000:], ydata_set[0][2000:]
+        print y_diff
+        neg_check(y_diff, 0, owd, False, 1)
 ####################
 
-    if dict['auto']:  # Subtracts all points with a constant scaling so that no values are negative within the specified range
-
-        def fields_view(arr, fields):
-            dtype2 = np.dtype({name:arr.dtype.fields[name] for name in fields})
-            return np.ndarray(arr.shape, dtype2, arr, 0, arr.strides)
-
-        strc = np.zeros(len(y_diff), dtype=[('Neg Values', float), ('List', int), ('Index', int)])
-
-        for k in range(len(y_diff)):
-            lowest_neg = 0
-            #print 'k\n', k
-            #print y_diff[k]
-            
-            neg_vals = [j for j, i in enumerate(y_diff[k]) if i < 0]  # Find all negative values
-            #print 'neg_vals\n', neg_vals
-            for i in neg_vals:
-                #print xdata_set[i]
-                continue
-            try: 
-                lowest_neg = np.amin([y_diff[k][i] for i in neg_vals if xdata_set[i] > th_q_low and xdata_set[i] < th_q_high])  # Find the largest negative values
-                #print 'lowest_ne\n', lowest_neg
-            except ValueError:
-                continue
-                #print 'No negative values between '+str(th_q_low)+ ' and ' + str(th_q_high) + ' AA.'
-            if lowest_neg != 0:
-                tallet = [i for i in neg_vals if y_diff[k][i] == lowest_neg]  # Returns index for largest negative value
-                print y_diff[k][tallet], xdata_set[tallet]
-                #print 'tallet\n', tallet
-                print 'Negative values between '+str(th_q_low)+ ' and ' + str(th_q_high) + ' AA at {:6.1f}'.format(k * totime) + ' m.'
-
-                v1 = fields_view(strc, ['Neg Values', 'List', 'Index'])
-                v1[k] = lowest_neg, k, tallet[0] 
-
-        strc.sort(order='Neg Values')
-
+           
+####################
+#    
+#    if dict['auto']:  # Subtracts all points with a constant scaling so that no values are negative within the specified range
+#        y_diff = ydata_set[:] - 0#ybg_set[:]
+#        y_diff = np.array(y_diff)
+#        
+#        print np.amin(y_diff), 'heeeeeeeeeeeeeeej'
+#
+#        strc = np.zeros(len(y_diff), dtype=[('Neg Values', float), ('List', int), ('Index', int)])
+#
+#        for k in range(len(y_diff)):
+#            lowest_neg = 0
+#            #print 'k\n', k
+#            #print y_diff[k]
+#            
+#            neg_vals = [j for j, i in enumerate(y_diff[k]) if i < 0]  # Find all negative values
+#            zero_vals = [j for j, i in enumerate(y_diff[k]) if i = 0]  # Find all negative values
+#            positive_vals = [j for j, i in enumerate(y_diff[k]) if i > 0]  # Find all negative values
+#            
+#            #print 'neg_vals\n', neg_vals
+#            #for i in neg_vals:
+#                #print xdata_set[i]
+#                #continue
+#            try: 
+#                lowest_neg = np.amin([y_diff[k][i] for i in neg_vals if xdata_set[i] > th_q_low and xdata_set[i] < th_q_high])  # Find the largest negative values
+#                #print 'lowest_ne\n', lowest_neg
+#            except ValueError:
+#                continue
+#                #print 'No negative values between '+str(th_q_low)+ ' and ' + str(th_q_high) + ' AA.'
+#            if lowest_neg > 0:
+#                tallet = [i for i in neg_vals if y_diff[k][i] == lowest_neg]  # Returns index for largest negative value
+#                print y_diff[k][tallet], xdata_set[tallet]
+#                #print 'tallet\n', tallet
+#                print 'Negative values between '+str(th_q_low)+ ' and ' + str(th_q_high) + ' AA at {:6.1f}'.format(k * totime) + ' m.'
+#
+#                v1 = fields_view(strc, ['Neg Values', 'List', 'Index'])
+#                v1[k] = lowest_neg, k, tallet[0] 
+#
+#        strc.sort(order='Neg Values')
+#
 ###################
+ 
+
 
     else:  # Takes a constant scaling factor and subtracts bg from data. The data is then checked for negative values     
         scaled_bg = (ybg_set[:] * dict['bg_scaling'])
