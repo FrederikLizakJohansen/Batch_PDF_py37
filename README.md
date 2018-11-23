@@ -4,31 +4,36 @@ Coverting total scattering data into PDF.
 
 The script consists of multiple part.
 
- * Functions
+ * Functions.
 
- * Creating dictionary
+ * Creating dictionary.
 
- * Defining variables in dictionary and constructing path for data
+ * Defining variables in dictionary and constructing path for data.
 
- * Importing data
+ * Importing data.
 
- * Manipulating background
+   - Either as a txt or binary with hdf5.
 
- * Calculating PDF and constructing output-files
+ * Background subtracktion .
+
+   - Manually or automatically (not perfect).
+
+ * Calculating PDF and constructing output-files.
+
+ * Saving data
+
+   - Either as txt files or binary with hdf5.
+
+   - Including header
+
+ * Generating pictures.
 
 # FUTURE IMPROVEMENTS
 
- * Save interpolated data.
+ * Validation methods of the background subtraction.
 
-   * Implement HDF5 to save data.
+ * Manuel / setup description
 
- * Automatize data_magic.
+# Bugs
 
- * Prevent background subtraction for returning negative values.
-
-# BUGS
-
- * Sum doesn't work properbly
-
- * when all bg and data is the same, but bg and data differ in length
-
+ * Not found, yet.
