@@ -22,7 +22,7 @@ The script consists of multiple part.
 
  * Saving data
 
-   - Either a txt files or binary with hdf5.
+   - Either as txt files or binary with hdf5.
 
    - Including header
 
@@ -30,14 +30,10 @@ The script consists of multiple part.
 
 # FUTURE IMPROVEMENTS
 
- * Prevent background subtraction for returning negative values.
-
-   - Need some optimization.
-
  * Validation methods of the background subtraction.
 
- * Nyquist.
+ * Manuel / setup description
 
 # Bugs
 
- * Auto single scaling not working.
+ * Not found, yet.

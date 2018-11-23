@@ -106,10 +106,10 @@ def pic_dir(owd, folder_name):
         os.makedirs(dir_path)
 
     os.chdir(dir_path)
-    print '\nDirectory has been changed:'
+    print 'Directory has been changed:'
     print os.getcwd()   
 
-def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip):
+def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip, load_str):
     """
 
     """
@@ -120,9 +120,9 @@ def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip):
     dim = 1
     lendat1 = 0
 
-    print 'Loading files:'
+    print 'Loading '+str(load_str)+':'
     for i in tqdm(range(frame_sumstart, frame_sumstart + nr_files)):
-        frame = file_name + str.zfill(str(i+1), 5) + str(file_type)
+        frame = file_name + str.zfill(str(i), 5) + str(file_type)
         frame_data = np.loadtxt(frame, skiprows = line_skip)
         x_values.append(frame_data[:,0])
         y_values.append(frame_data[:,1])
@@ -453,7 +453,7 @@ totime = dict['timeframe']/60
 #---------------------------------------------------------------------------------------------------
 
 if dict['load_data'] == False:
-    print 'Loading HDF5 files:'
+    print '\nLoading HDF5 files:'
     pic_dir(dict['cfg_dir'], 'data_binary_')
     
     hdf5_file = h5py.File('raw_data.hdf5', 'r')
@@ -469,26 +469,24 @@ if dict['load_data'] == False:
     dict['sumstep'] = 1
     dict['nr_bg_files'] = dict['nr_files']
     same_len = 0
-
+    steps = len(xdata_set)
+    dict['save_data'] = False
 else:
-    print 'Initilazing import of files!'
+    print '\nInitilazing import of files!'
     if dict['change_dir']:
         os.chdir(dict['data_dir'])
-        print '\nDirectory has been changed:'
+        print 'Directory has been changed:'
         print os.getcwd()
 
-    xdata_set, ydata_set, data_dim, min_val_data, max_val_data, data_len = read_data(dict['first_file'], dict['nr_files'], dict['file_name'], dict['file_type'], dict['line_skip'])
-
+    xdata_set, ydata_set, data_dim, min_val_data, max_val_data, data_len = read_data(dict['first_file'], dict['nr_files'], dict['file_name'], dict['file_type'], dict['line_skip'], 'Data files')
+   
     if dict['change_dir']:
         os.chdir(dict['bg_dir'])
-        print '\nDirectory has been changed:'
+        print 'Directory has been changed:'
         print os.getcwd()
 
-    xbg_set, ybg_set, bg_dim, min_val_bg, max_val_bg, bg_len = read_data(dict['first_bg'], dict['nr_bg_files'], dict['bg_file'], dict['bg_type'], dict['bgline_skip'])  
+    xbg_set, ybg_set, bg_dim, min_val_bg, max_val_bg, bg_len = read_data(dict['first_bg'], dict['nr_bg_files'], dict['bg_file'], dict['bg_type'], dict['bgline_skip'], 'Background files')  
 
-if dict['load_data']:
-    steps = len(xdata_set)
-else:
     if bg_len > data_len:
         steps = bg_len * 2
     elif bg_len < data_len:
@@ -496,105 +494,106 @@ else:
     else:
         steps = data_len*2#data_len
 
-if dict['data_magic']:                                                                                      #Find highest min value and lowest max value for interpolation
-    xmin = 0
-    xmax = 0
+    if dict['data_magic']:                                                                                      #Find highest min value and lowest max value for interpolation
+        xmin = 0
+        xmax = 0
 
-    if min_val_data > min_val_bg:
-        xmin = min_val_data
-    else:
-        xmin = min_val_bg
-
-    if max_val_data < max_val_bg:
-        xmax = max_val_data
-    else:
-        xmax = max_val_bg   
-
-    ydata_set_int = np.zeros((dict['nr_files'], steps))
-    ybg_set_int = np.zeros((dict['nr_bg_files'], steps))
-    
-    same_len = 1
-    if data_dim == 0 and bg_dim == 1:
-        print '\n', 'Background files vary in length.'
-        print 'Interpolating data files:'
-        for i in tqdm(range(0, abs(dict['nr_files'] - dict['first_file'])+1)):
-            xdata_set_int, y_int = interpol(xmin, xmax, steps, xdata_set, ydata_set[i])
-            ydata_set_int[i] = y_int
-
-        print 'Interpolating background files:'
-        for i in tqdm(range(0, abs(dict['nr_bg_files'] - dict['first_bg'])+1)):    
-            _, ybg_int = interpol(xmin, xmax, steps, xbg_set[i], ybg_set[i])
-            ybg_set_int[i] = ybg_int
-
-    elif data_dim == 1 and bg_dim == 0:
-        print '\n', 'Data files vary in length.'
-        print 'Interpolating data files:'
-        for i in tqdm(range(0, abs(dict['nr_files'] - dict['first_file'])+1)):
-            xdata_set_int, y_int = interpol(xmin, xmax, steps, xdata_set[i], ydata_set[i])
-            ydata_set_int[i] = y_int
-
-        print 'Interpolating background files:'
-        for i in tqdm(range(0, abs(dict['nr_bg_files'] - dict['first_bg'])+1)):    
-            _, ybg_int = interpol(xmin, xmax, steps, xbg_set, ybg_set[i])
-            ybg_set_int[i] = ybg_int
-
-    elif data_dim == 1 and bg_dim == 1:
-        print '\n', 'Size of data and background array does not match.'
-        print 'Interpolating data files:'
-        for i in tqdm(range(0, abs(dict['nr_files'] - dict['first_file'])+1)):
-            xdata_set_int, y_int = interpol(xmin, xmax, steps, xdata_set[i], ydata_set[i])
-            ydata_set_int[i] = y_int
-
-        print 'Interpolating bachground files:'
-        for i in tqdm(range(0, abs(dict['nr_bg_files'] - dict['first_bg'])+1)):    
-            _, ybg_int = interpol(xmin, xmax, steps, xbg_set[i], ybg_set[i])
-            ybg_set_int[i] = ybg_int
-
-    else:
-        print 'All data have same dimension'
-        
-        if np.array_equal(xdata_set, xbg_set) == True:
-            steps = data_len
-            xdata_set_int = xdata_set
-            ydata_set_int = ydata_set
-            xdata_set = xbg_set
-            ybg_set_int = ybg_set
-
-            print 'No need for interpolation'
+        if min_val_data > min_val_bg:
+            xmin = min_val_data
         else:
-            print 'Data got same length but different x values.'
-            print 'Data will be interpolated to have same x values.'
-            for i in tqdm(range(0, abs(dict['nr_files'] - dict['first_file'])+1)):
+            xmin = min_val_bg
+
+        if max_val_data < max_val_bg:
+            xmax = max_val_data
+        else:
+            xmax = max_val_bg   
+
+        ydata_set_int = np.zeros((dict['nr_files'], steps))
+        ybg_set_int = np.zeros((dict['nr_bg_files'], steps))
+        
+        same_len = 1
+        if data_dim == 0 and bg_dim == 1:
+            print '\n', 'Background files vary in length.'
+            print 'Interpolating data files:'
+            for i in tqdm(range(0, dict['nr_files'])):
                 xdata_set_int, y_int = interpol(xmin, xmax, steps, xdata_set, ydata_set[i])
                 ydata_set_int[i] = y_int
 
             print 'Interpolating background files:'
-            for i in tqdm(range(0, abs(dict['nr_bg_files'] - dict['first_bg'])+1)):    
+            for i in tqdm(range(0, dict['nr_bg_files'])):    
+                _, ybg_int = interpol(xmin, xmax, steps, xbg_set[i], ybg_set[i])
+                ybg_set_int[i] = ybg_int
+
+        elif data_dim == 1 and bg_dim == 0:
+            print '\n', 'Data files vary in length.'
+            print 'Interpolating data files:'
+            for i in tqdm(range(0, dict['nr_files'])):
+                xdata_set_int, y_int = interpol(xmin, xmax, steps, xdata_set[i], ydata_set[i])
+                ydata_set_int[i] = y_int
+
+            print 'Interpolating background files:'
+            for i in tqdm(range(0, dict['nr_bg_files'])):    
                 _, ybg_int = interpol(xmin, xmax, steps, xbg_set, ybg_set[i])
                 ybg_set_int[i] = ybg_int
 
-    xdata_set = xdata_set_int
-    ydata_set = ydata_set_int
-    xbg_set = xdata_set
-    ybg_set = ybg_set_int  
-    
-if dict['sumstep'] > 1:
-    ydata_set = sum_data(dict['nr_files'], dict['sumstep'], ydata_set)
-    ybg_set = sum_data(dict['nr_bg_files'], dict['sumstep'], ybg_set)
-    dict['nr_files'] = (dict['nr_files']/dict['sumstep'])+1
-    dict['nr_bg_files'] = (dict['nr_bg_files']/dict['sumstep'])+1
+        elif data_dim == 1 and bg_dim == 1:
+            print '\n', 'Size of data and background array does not match.'
+            print 'Interpolating data files:'
+            for i in tqdm(range(0, dict['nr_files'])):
+                xdata_set_int, y_int = interpol(xmin, xmax, steps, xdata_set[i], ydata_set[i])
+                ydata_set_int[i] = y_int
 
-if same_len == 1:
-    ybg_set = np.reshape(ybg_set, (dict['nr_bg_files'], steps))
+            print 'Interpolating bachground files:'
+            for i in tqdm(range(0, dict['nr_bg_files'])):    
+                _, ybg_int = interpol(xmin, xmax, steps, xbg_set[i], ybg_set[i])
+                ybg_set_int[i] = ybg_int
 
-if dict['nr_files'] > dict['nr_bg_files']:                                                                          #If there are less background files the data files exstend bg matrix with last background row til they match
-    add_bgy = ybg_set[-1]
-    add_bgy = np.reshape(add_bgy, (1, steps))
+        else:
+            print '\nAll data have same dimension'
+            
+            if np.array_equal(xdata_set, xbg_set) == True:
+                steps = data_len
+                xdata_set_int = xdata_set
+                ydata_set_int = ydata_set
+                xdata_set = xbg_set
+                ybg_set_int = ybg_set
 
-    print '\n', 'Extending background matrix:'
-    for i in tqdm(range(abs(dict['nr_files'] - dict['nr_bg_files']))):
-        ybg_set = np.concatenate((ybg_set, add_bgy), axis = 0)
- 
+                print 'No need for interpolation'
+            else:
+                print '\nData got same length but different x values.'
+                print 'Data will be interpolated to have same x values.' 
+                for i in tqdm(range(0, dict['nr_files'])):
+                    print 
+                    xdata_set_int, y_int = interpol(xmin, xmax, steps, xdata_set, ydata_set[i])
+                    ydata_set_int[i] = y_int
+
+                print 'Interpolating background files:'
+                for i in tqdm(range(0, dict['nr_bg_files'])):    
+                    _, ybg_int = interpol(xmin, xmax, steps, xbg_set, ybg_set[i])
+                    ybg_set_int[i] = ybg_int
+
+        xdata_set = xdata_set_int
+        ydata_set = ydata_set_int
+        xbg_set = xdata_set
+        ybg_set = ybg_set_int  
+        
+    if dict['sumstep'] > 1:
+        ydata_set = sum_data(dict['nr_files'], dict['sumstep'], ydata_set)
+        ybg_set = sum_data(dict['nr_bg_files'], dict['sumstep'], ybg_set)
+        dict['nr_files'] = (dict['nr_files']/dict['sumstep'])+1
+        dict['nr_bg_files'] = (dict['nr_bg_files']/dict['sumstep'])+1
+
+    if same_len == 1:
+        ybg_set = np.reshape(ybg_set, (dict['nr_bg_files'], steps))
+
+    if dict['nr_files'] > dict['nr_bg_files']:                                                                          #If there are less background files the data files exstend bg matrix with last background row til they match
+        add_bgy = ybg_set[-1]
+        add_bgy = np.reshape(add_bgy, (1, steps))
+
+        print '\n', 'Extending background matrix:'
+        for i in tqdm(range(abs(dict['nr_files'] - dict['nr_bg_files']))):
+            ybg_set = np.concatenate((ybg_set, add_bgy), axis = 0)
+     
 if dict['save_data']:
     print '\nSaving data!'
     print '\tSaved data is not background subtrackted.\n'
@@ -633,9 +632,9 @@ if dict['make_cfg'] and dict['load_dict'] == False:
 
     rpoly = 0.9
     
-    print 'New cfg file is being constructed'
+    print '\nNew cfg file is being constructed'
     os.chdir(dict['cfg_dir'])
-    print '\nDirectory has been changed:'
+    print 'Directory has been changed:'
     print os.getcwd()
     NAMES  = np.array(['[DEFAULT]','dataformat', 'outputtypes', 'composition', 'qmaxinst', 'qmin', 'qmax', 'rmin', 'rmax', 'rstep', 'rpoly'])
     FLOATS = np.array(['',dataformat, outputtypes, composition, qmaxinst, qmin, qmax, rmin, rmax, rstep, rpoly])
@@ -646,8 +645,10 @@ if dict['make_cfg'] and dict['load_dict'] == False:
     th_q_high = cfg.qmax * 10
 
 elif dict['PDF']:
+    print '\nCfg file is being importet.'
+    print '\t Values are needed for computation!!!'
     os.chdir(dict['cfg_dir'])
-    print '\nDirectory has been changed:'
+    print 'Directory has been changed:'
     print os.getcwd()
 
     cfg = loadPDFConfig(dict['cfg_file'])
@@ -677,6 +678,7 @@ else:
 #---------------------------------------------------------------------------------------------------
 
 if dict['calib_bg']:
+    print '\nCalib_bg is set to True!'
     '''
     If calib_bg = True, then all frames / measurements will be scaled with the same constant. 
     For determining the scalingsfactor for background subtration two methods can be done. It 
@@ -687,51 +689,30 @@ if dict['calib_bg']:
     '''
     if dict['auto']:
         '''
-        The largest negative diviation between data and background i found and s
+        Largest diviation is found and used to calculate the scaling factor. 
+        The scaling factor is multiplied with 0.99 to ensure that there are no
+        negative values.
         '''
-        count = 0
-        diff_ph = 0
-        scale   = []
-        a = 1
-        b = 0.95
-        for li1, li2 in zip(ydata_set, ybg_set):
-            diff_index_ph = []
-            diff_index_ph.append(heapq.nsmallest(len(li1), xrange(len(li1)), key=lambda i: (li1[i] - li2[i])/li1[i]))  # Finds index for largest difference
-            diff_index = np.array(diff_index_ph)
+        scale = 999
+        print 'Calculating scaling factor.'
+        print 'Predetermined Scaling factor is ignored!'
+        for li1, li2 in tqdm(zip(ydata_set, ybg_set)):
+            diff_index = []
+            diff_index.append(heapq.nsmallest(len(li1), xrange(len(li1)), key=lambda i: ((li1[i] - li2[i])/(li1[i]+0.00001))))  # Finds index for largest difference 
+            scale_ph = (li1[diff_index[0][0]] / li2[diff_index[0][0]])*0.99
+            if scale_ph < scale:
+                scale = scale_ph
+            del diff_index[:]
         
-            for i in range(len(diff_index)):
-                if ((li1[diff_index[0][i]]-li2[diff_index[0][i]])/ li1[diff_index[0][i]])< diff_ph and th_q_low <= xdata_set[i] and xdata_set[i] <= th_q_high:  # Update ph if new value is larger and within q range it's stored
-
-                    list_ind = count    
-                    index    = i
-                    a = li1[diff_index[0][i]]
-                    b = li2[diff_index[0][i]]
-                    print 'Scaling: ', a/b 
-                    diff_ph  = li1[diff_index[0][i]] - li2[diff_index[0][i]]
- 
-                else:
-                    continue
-            count += 1
-            del diff_index_ph[:]
-
-            scale.append(a / b) 
-            print a/b
-
+        print '\tScaling factor = ', scale
         scale = np.array(scale)
-
         scaled_bg = ybg_set.T * scale
         scaled_bg = scaled_bg.T
         y_diff = ydata_set[:] - scaled_bg
-        y_diff = np.array(y_diff)
-        np.set_printoptions(threshold=np.nan)
-        
-        for i in range(dict['nr_files']):
-            for j in range(len(y_diff[0])):
-                if y_diff[i][j] <= 0:
-                    print 'Frame:', i,' index :',j, ' neg val: ', y_diff[i][j]
-                    
-            print '\n'
-         
+        y_diff = np.array(y_diff)    
+        lets_plot(xdata_set, ydata_set[0], xbg_set, scaled_bg[0], xdata_set, y_diff[0], xdata_set, ydata_set[-1], xbg_set, scaled_bg[-1], xdata_set, y_diff[-1], dict['save_pics'], dict['cfg_dir'])
+
+     
 ###################
 #    
 #    if dict['auto']:  # Subtracts all points with a constant scaling so that no values are negative within the specified range
@@ -770,12 +751,8 @@ if dict['calib_bg']:
 #                v1 = fields_view(strc, ['Neg Values', 'List', 'Index'])
 #                v1[k] = lowest_neg, k, tallet[0] 
 #
-#        strc.sort(order='Neg Values')
-#    
-##################
+#        strc.sort(order='Neg Values'#
  
-
-
     else:  # Takes a constant scaling factor and subtracts bg from data. The data is then checked for negative values     
         scaled_bg = (ybg_set[:] * dict['bg_scaling'])
         y_diff = ydata_set[:] - scaled_bg
@@ -796,43 +773,55 @@ if dict['calib_bg']:
 
 else:
     '''
-
+    Generating Multiple scaling factors.
     '''
+    print '\nGenerating multiple scaling factors.'
     if dict['auto']:
         '''
         Auto scaling for each frame must be implemented here.
         A plot over the scaling factor should be produced, so that the user can see if unnatural jumps occur
-        '''
-  
+        ''' 
         count = 0
         scale_list = []
         for li1, li2 in zip(ydata_set, ybg_set):
             scale = 0
-            ph = 0
-            diff_index = [] + heapq.nsmallest(len(li1), xrange(len(li1)), key=lambda i: ((li1[i] - li2[i])/li1[i]))  # Finds index for largest difference
-            for i in range(len(diff_index)):  
-                if ((li1[diff_index[i]]-li2[diff_index[i]])/ li1[diff_index[i]]) < ph and th_q_low <= xdata_set[i] and xdata_set[i] <= th_q_high: 
-                    scale = li1[diff_index[i]] / li2[diff_index[i]]
-                    ph =  ((li1[diff_index[i]]-li2[diff_index[i]])/ li1[diff_index[i]])  
-
-            scale = scale  
-            scaled_bg = ybg_set.T * scale
-            scaled_bg = scaled_bg.T
-            y_diff = ydata_set[count] - scaled_bg
+            diff_index = [] + heapq.nsmallest(len(li1), xrange(len(li1)), key=lambda i: ((li1[i] - li2[i])/(li1[i]+0.00001)))  # Finds index for largest difference between li1 and li2
+            scan_ph = 1  # Search til it finds a value within qmin and qmax
+            i       = 0 
+            while scan_ph == 1:
+                #print xdata_set[diff_index[i]]
+                #print th_q_low ,' < ', xdata_set[diff_index[i]] , ' and ', th_q_high , ' > ', xdata_set[diff_index[i]],  li1[i]
+                if th_q_low < xdata_set[diff_index[i]] and th_q_high > xdata_set[diff_index[i]] and li1[diff_index[i]] != 0:
+                    scale = (li1[diff_index[i]] / li2[diff_index[i]]+0.00001) * 0.99  # Scales the background a bit further down
+                    #print (li1[diff_index[i]]) ,' / ', (li2[diff_index[i]]+0.00001) 
+                    scan_ph = 0
+                
+                i += 1
+            #scaled_bg = ybg_set.T * scale
+            #scaled_bg = scaled_bg.T
+            #y_diff = ydata_set[count] - scaled_bg
             scale_list.append(scale)
             count += 1
             del diff_index[:]
-
+        y_diff = np.zeros((dict['nr_files'], steps))
+        scaled_bg = np.zeros((dict['nr_files'], steps))
+        for i in range(len(scale_list)):
+            scaled_bg[i] = ybg_set[i] * scale_list[i] 
+            y_diff[i] = ydata_set[i] - scaled_bg[i]
+    
         y_diff = np.array(y_diff)
         np.set_printoptions(threshold=np.nan)
+        for i in range(dict['nr_files']):
+            print i,') ', scale_list[i]
 
         for i in range(dict['nr_files']):
-            print 'Scaling: ', scale_list[i]
-            for j in range(len(y_diff[0])):
-                if y_diff[i][j] <= 0:
-                    print 'Frame:', i,' index :',xdata_set[j], ' neg val: ', y_diff[i][j]
-                    
-            print '\n'
+            for j in range(len(y_diff[i])):
+                if y_diff[i][j] <= 0 and th_q_low < xdata_set[j] and th_q_high > xdata_set[j] :
+                    print 'Frame:', i,' X-val :',xdata_set[j], ' neg val: ', y_diff[i][j]
+        np.savetxt('Scaling'+str(dict['nr_files'])+'.txt', scale_list)            
+     
+        lets_plot(xdata_set, ydata_set[0], xbg_set, scaled_bg[0], xdata_set, y_diff[0], xdata_set, ydata_set[-1], xbg_set, scaled_bg[-1], xdata_set, y_diff[-1], dict['save_pics'], dict['cfg_dir'])
+
 
     else:
         scale_factor = np.zeros(dict['nr_files'])
@@ -911,7 +900,7 @@ if dict['PDF']:
         cfg = loadPDFConfig(cfg_name + '.cfg')
     else:
         os.chdir(dict['cfg_dir'])
-        print '\nDirectory has been changed:'
+        print 'Directory has been changed:'
         print os.getcwd()
 
         cfg = loadPDFConfig(dict['cfg_file'])   
@@ -966,34 +955,34 @@ if dict['PDF']:
         header     = np.column_stack((head_name, head_vals))
     
     if dict['gen_PDF_file']:
-        print "Generating G(r) files!"
+        print "\nGenerating G(r) files!"
         pic_dir(dict['cfg_dir'], 'Gr_')
-        for i in tqdm(range(dict['nr_files']-1)):
+        for i in tqdm(range(dict['nr_files'])):
             saving_dat = np.column_stack((r[i],gr[i])) 
             saving_dat = (np.vstack(((header).astype(str), (saving_dat).astype(str))))
             np.savetxt(dict['file_name'] + str(i).zfill(3) +'.gr', saving_dat, fmt='%s')
 
     if dict['gen_fq_file']:
-        print "Generating F(q) files!"
+        print "\nGenerating F(q) files!"
         pic_dir(dict['cfg_dir'], 'Fq_')
-        for i in tqdm(range(dict['nr_files']-1)):
+        for i in tqdm(range(dict['nr_files'])):
             saving_dat = np.column_stack((q_fq[i],fq[i])) 
             saving_dat = (np.vstack(((header).astype(str), (saving_dat).astype(str))))
-            np.savetxt(dict['file_name'] + str(i).zfill(3) +'.gr', saving_dat, fmt='%s')
+            np.savetxt(dict['file_name'] + str(i).zfill(3) +'.fq', saving_dat, fmt='%s')
 
     if dict['gen_iq_file']:
-        print "Generating I(q) files!"
+        print "\nGenerating I(q) files!"
         pic_dir(dict['cfg_dir'], 'Iq_')
-        for i in tqdm(range(dict['nr_files']-1)):
+        for i in tqdm(range(dict['nr_files'])):
             saving_dat = np.column_stack((q_iq[i],iq[i])) 
             saving_dat = (np.vstack(((header).astype(str), (saving_dat).astype(str))))
-            np.savetxt(dict['file_name'] + str(i).zfill(3) +'.gr', saving_dat, fmt='%s')
+            np.savetxt(dict['file_name'] + str(i).zfill(3) +'.iq', saving_dat, fmt='%s')
 
     timeresolved = (np.array(range(len(y_diff))) + dict['first_file'])*totime 
     timeresolved_q = (np.array(range(len(fq))) + dict['first_file'])*totime
 
     fig = plt.figure(figsize=(12, 6))
-    
+    print '\nMaking PDF Grid Plot'
     #Plot f(Q)
     plt.subplot(211)
     X, Y = np.meshgrid(q_fq[0], timeresolved_q)
