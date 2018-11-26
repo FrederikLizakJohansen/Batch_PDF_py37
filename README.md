@@ -1,4 +1,4 @@
-# TimeResolved_script
+# Batch_PDF
 
 Coverting total scattering data into PDF.
 
@@ -37,3 +37,4 @@ The script consists of multiple part.
 # Bugs
 
  * Not found, yet.
+
