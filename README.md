@@ -20,21 +20,26 @@ The script consists of multiple part.
 
  * Calculating PDF and constructing output-files.
 
- * Saving data
+ * Saving data.
 
    - Either as txt files or binary with hdf5.
 
-   - Including header
+   - Including header.
 
  * Generating pictures.
 
 # FUTURE IMPROVEMENTS
 
- * Validation methods of the background subtraction.
+ * Better validation methods of the background subtraction.
 
- * Manuel / setup description
+ * Manuel / Installation guide.
+
+   - .exe file to install correct python environment. 
+
+ * Use different timeresolutions for the background and data.
 
 # Bugs
 
  * Not found, yet.
+
 
