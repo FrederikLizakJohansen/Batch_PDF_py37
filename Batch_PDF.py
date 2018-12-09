@@ -22,6 +22,7 @@ import pickle
 import ConfigParser
 import h5py
 import heapq
+import sys
 
 from prompter import yesno
 from tqdm import tqdm
@@ -117,12 +118,14 @@ def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip, load_st
     y_values = []
     min_val  = []
     max_val  = []
+    names    = []
     dim = 1
     lendat1 = 0
 
     print 'Loading '+str(load_str)+':'
     for i in tqdm(range(frame_sumstart, frame_sumstart + nr_files)):
         frame = file_name + str.zfill(str(i), 5) + str(file_type)
+        names.append(frame)
         frame_data = np.loadtxt(frame, skiprows = line_skip)
         x_values.append(frame_data[:,0])
         y_values.append(frame_data[:,1])
@@ -145,7 +148,7 @@ def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip, load_st
     min_val = np.amax(min_val)
     max_val = np.amin(max_val)
         
-    return x_values, y_values, dim, min_val, max_val, lendat1
+    return x_values, y_values, dim, min_val, max_val, lendat1, names
 
 def lets_plot(x_data, y_data, x_bg, y_bg, x_diff, y_diff, x_data1, y_data1, x_bg1, y_bg1, x_diff1, y_diff1, gen_pic, owd):
     fig2, ((ax), (ax1)) = plt.subplots(2, 1, figsize = (14,6))
@@ -227,17 +230,18 @@ def sum_data(nr_sum, sumstep, data):
 #
 #---------------------------------------------------------------------------------------------------
 
-if os.path.isfile('TimeResolved_config.ini'):
+if os.path.isfile('Batch_PDF_config.ini'):
     timeResCon = True
     parser     = ConfigParser.ConfigParser()
-    parser.read('TimeResolved_config.ini')
+    parser.read('Batch_PDF_config.ini')
     load_dict  = parser.getboolean('Dictionary', 'load_dict')
     imp_dict   = parser.get('Dictionary', 'imp_dict')
 else:
     load_dict  = False
     timeResCon = False
-    imp_dict   = 'XXX_directory.py'
-    print "No TimeResolved_config.ini exists!"
+    imp_dict   = 'Batch_PDF_directory.py'
+    print "No Batch_PDF_config.ini exists within current working directory!"
+    print "Looking for directory name Batch_PDF_directory."  # XXXXXX
     if load_dict:
         print 'Script is using an imported dictionary!'
     else:
@@ -317,7 +321,7 @@ if load_dict:
 elif timeResCon:
     parser = ConfigParser.ConfigParser()
     dict = {}
-    parser.read('TimeResolved_config.ini')
+    parser.read('Batch_PDF_config.ini')
 
     # [Main]
     dict['load_data']   = parser.getboolean('Main', 'load_data')
@@ -425,7 +429,7 @@ else:
     dict['show_all']    = True                                                                                  #Shows iq, sq, fq and Gr for a specific file, pdf_file
     dict['save_pics']   = True
     dict['pdf_file']    = -1                                                                                    #Show the pdf of a specific file        
-    dict['time_frame']  = 2                                                                                     # Time for every measurement in seconds
+    dict['timeframe']  = 2                                                                                     # Time for every measurement in seconds
     dict['PDF_name']    = 'WCl6_160_p'
 
     # [3D_Plot]
@@ -478,14 +482,14 @@ else:
         print 'Directory has been changed:'
         print os.getcwd()
 
-    xdata_set, ydata_set, data_dim, min_val_data, max_val_data, data_len = read_data(dict['first_file'], dict['nr_files'], dict['file_name'], dict['file_type'], dict['line_skip'], 'Data files')
+    xdata_set, ydata_set, data_dim, min_val_data, max_val_data, data_len, data_name = read_data(dict['first_file'], dict['nr_files'], dict['file_name'], dict['file_type'], dict['line_skip'], 'Data files')
    
     if dict['change_dir']:
         os.chdir(dict['bg_dir'])
         print 'Directory has been changed:'
         print os.getcwd()
 
-    xbg_set, ybg_set, bg_dim, min_val_bg, max_val_bg, bg_len = read_data(dict['first_bg'], dict['nr_bg_files'], dict['bg_file'], dict['bg_type'], dict['bgline_skip'], 'Background files')  
+    xbg_set, ybg_set, bg_dim, min_val_bg, max_val_bg, bg_len, bg_name = read_data(dict['first_bg'], dict['nr_bg_files'], dict['bg_file'], dict['bg_type'], dict['bgline_skip'], 'Background files')  
 
     if bg_len > data_len:
         steps = bg_len * 2
@@ -693,13 +697,26 @@ if dict['calib_bg']:
         The scaling factor is multiplied with 0.99 to ensure that there are no
         negative values.
         '''
-        scale = 999
+        scale = 9999
         print 'Calculating scaling factor.'
         print 'Predetermined Scaling factor is ignored!'
+
         for li1, li2 in tqdm(zip(ydata_set, ybg_set)):
-            diff_index = []
-            diff_index.append(heapq.nsmallest(len(li1), xrange(len(li1)), key=lambda i: ((li1[i] - li2[i])/(li1[i]+0.00001))))  # Finds index for largest difference 
-            scale_ph = (li1[diff_index[0][0]] / li2[diff_index[0][0]])*0.99
+            diff_index = [] + heapq.nsmallest(len(li1), xrange(len(li1)), key=lambda i: ((li1[i] - li2[i])/(li1[i]+0.00001)))  # Finds index for largest difference 
+            scale_ph = 9999
+            scan_ph = 1  # Search til it finds a value within qmin and qmax
+            i       = 0 
+            while scan_ph == 1:
+
+                if th_q_low < xdata_set[diff_index[i]] and th_q_high > xdata_set[diff_index[i]] and li1[diff_index[i]] != 0:
+                    scale_ph = (li1[diff_index[i]] / li2[diff_index[i]]+0.00001) * 0.99  # Scales the background a bit further down
+                    scan_ph = 0
+                elif i == 1000:
+                    print "Check data file! 1000 values are equal to 0."
+                    sys.exit()               
+                else:
+                    i += 1
+
             if scale_ph < scale:
                 scale = scale_ph
             del diff_index[:]
@@ -710,6 +727,12 @@ if dict['calib_bg']:
         scaled_bg = scaled_bg.T
         y_diff = ydata_set[:] - scaled_bg
         y_diff = np.array(y_diff)    
+
+        for i in range(dict['nr_files']):
+            for j in range(len(y_diff[i])):
+                if y_diff[i][j] <= 0 and th_q_low < xdata_set[j] and th_q_high > xdata_set[j] :
+                    print 'Frame:', i,' X-val :',xdata_set[j], ' neg val: ', y_diff[i][j]
+
         lets_plot(xdata_set, ydata_set[0], xbg_set, scaled_bg[0], xdata_set, y_diff[0], xdata_set, ydata_set[-1], xbg_set, scaled_bg[-1], xdata_set, y_diff[-1], dict['save_pics'], dict['cfg_dir'])
 
      
@@ -754,7 +777,8 @@ if dict['calib_bg']:
 #        strc.sort(order='Neg Values'#
  
     else:  # Takes a constant scaling factor and subtracts bg from data. The data is then checked for negative values     
-        scaled_bg = (ybg_set[:] * dict['bg_scaling'])
+        scale = dict['bg_scaling']
+        scaled_bg = (ybg_set[:] * scale)
         y_diff = ydata_set[:] - scaled_bg
         y_diff = np.array(y_diff)
       
@@ -789,17 +813,12 @@ else:
             scan_ph = 1  # Search til it finds a value within qmin and qmax
             i       = 0 
             while scan_ph == 1:
-                #print xdata_set[diff_index[i]]
-                #print th_q_low ,' < ', xdata_set[diff_index[i]] , ' and ', th_q_high , ' > ', xdata_set[diff_index[i]],  li1[i]
                 if th_q_low < xdata_set[diff_index[i]] and th_q_high > xdata_set[diff_index[i]] and li1[diff_index[i]] != 0:
                     scale = (li1[diff_index[i]] / li2[diff_index[i]]+0.00001) * 0.99  # Scales the background a bit further down
                     #print (li1[diff_index[i]]) ,' / ', (li2[diff_index[i]]+0.00001) 
                     scan_ph = 0
                 
                 i += 1
-            #scaled_bg = ybg_set.T * scale
-            #scaled_bg = scaled_bg.T
-            #y_diff = ydata_set[count] - scaled_bg
             scale_list.append(scale)
             count += 1
             del diff_index[:]
@@ -818,13 +837,13 @@ else:
             for j in range(len(y_diff[i])):
                 if y_diff[i][j] <= 0 and th_q_low < xdata_set[j] and th_q_high > xdata_set[j] :
                     print 'Frame:', i,' X-val :',xdata_set[j], ' neg val: ', y_diff[i][j]
-        np.savetxt('Scaling'+str(dict['nr_files'])+'.txt', scale_list)            
+        #np.savetxt('Scaling'+str(dict['nr_files'])+'.txt', scale_list)            
      
         lets_plot(xdata_set, ydata_set[0], xbg_set, scaled_bg[0], xdata_set, y_diff[0], xdata_set, ydata_set[-1], xbg_set, scaled_bg[-1], xdata_set, y_diff[-1], dict['save_pics'], dict['cfg_dir'])
 
 
     else:
-        scale_factor = np.zeros(dict['nr_files'])
+        scale_list = np.zeros(dict['nr_files'])
         y_diff       = []
         scaled_bg    = []
 
@@ -840,9 +859,9 @@ else:
                     a.append(scale_index[0])
                     y_scaling = ydata_set[i][scale_index]
                     auto_scale = y_scaling / ybg_set[i][scale_index]
-                    scale_factor[i] = auto_scale
+                    scale_list[i] = auto_scale
 
-            scaled_bg.append(ybg_set[i] * scale_factor[i])
+            scaled_bg.append(ybg_set[i] * scale_list[i])
             y_diff.append(ydata_set[i] - scaled_bg[i]) 
 
         neg_files, neg_vals = neg_check(y_diff, dict['first_file'], dict['cfg_dir'], dict['save_pics'], totime)
@@ -860,7 +879,7 @@ else:
         x = x * totime
 
         fig2, ax = plt.subplots(figsize = (14,6))
-        ax.plot(x, scale_factor, 'bo-', label='Scale Factor')
+        ax.plot(x, scale_list, 'bo-', label='Scale Factor')
 
         ax.set_xlabel("Time [m]", fontsize=16) # the label of the y axis
         ax.set_ylabel('Scale factor', fontsize=16)  # the label of the y axis
@@ -950,14 +969,23 @@ if dict['PDF']:
     gr = np.array(gr)   
 
     if dict['gen_PDF_file'] == True or dict['gen_fq_file'] == True or dict['gen_iq_file'] == True:
-        head_name  = np.array(['composition', 'qmaxinst', 'qmin', 'qmax', 'rmin', 'rmax', 'Nyquist', 'rstep', 'rpoly', ''])
-        head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, ''])
+        head_name  = np.array(['# Composition', '# qmaxinst', '# qmin', '# qmax', '# rmin', '# rmax', '# Nyquist', '# rstep', '# rpoly', '# Background','# Scaling', ''])
+        head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, '', '',''])
         header     = np.column_stack((head_name, head_vals))
     
     if dict['gen_PDF_file']:
         print "\nGenerating G(r) files!"
         pic_dir(dict['cfg_dir'], 'Gr_')
         for i in tqdm(range(dict['nr_files'])):
+            head_name  = np.array(['# Composition', '# qmaxinst', '# qmin', '# qmax', '# rmin', '# rmax', '# Nyquist', '# rstep', '# rpoly', '# Data', '# Background','# Scaling', '#'])
+            
+            if (dict['calib_bg'] == False and dict['auto'] == True) or dict['calib_bg'] == False:
+                head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, dict['file_name'], dict['bg_file'], scale_list[i],''])
+            else:
+                head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, dict['file_name'], dict['bg_file'], scale, ''])
+
+            header     = np.column_stack((head_name, head_vals))
+
             saving_dat = np.column_stack((r[i],gr[i])) 
             saving_dat = (np.vstack(((header).astype(str), (saving_dat).astype(str))))
             np.savetxt(dict['file_name'] + str(i).zfill(3) +'.gr', saving_dat, fmt='%s')
@@ -1021,11 +1049,11 @@ if dict['PDF']:
 
     if dict['show_PDF']: 
         fig1, ax1 = plt.subplots(figsize=(12, 6))
-        ax1.plot(r[0], gr[dict['pdf_file'] - 1], label='Data')
+        ax1.plot(r[0], gr[dict['pdf_file']], 'o-', label='Data')
 
         ax1.set_xlabel("G(r) [$\AA^-$$^1$]", fontsize=16) # the label of the y axis
         ax1.set_ylabel('Intensity [a.u.]', fontsize=16)  # the label of the y axis
-        ax1.set_title("PDF of frame " + str(dict['pdf_file'] + 1), fontsize=20) # the title of the plot
+        ax1.set_title("PDF of frame " + str(dict['pdf_file']), fontsize=20) # the title of the plot
         ax1.tick_params(axis='x', labelsize = 16)
         ax1.tick_params(axis='y', labelsize = 16)
         ax1.legend(loc='best', fontsize = 13)
