@@ -1048,6 +1048,7 @@ if dict['PDF']:
         plt.close()
 
     if dict['show_PDF']: 
+        print '\nSaving PDF plot of ' + str(dict['first_file'] + dict['pdf_file'])
         fig1, ax1 = plt.subplots(figsize=(12, 6))
         ax1.plot(r[0], gr[dict['pdf_file']], 'o-', label='Data')
 
@@ -1069,6 +1070,7 @@ if dict['PDF']:
             plt.close()
 
     if dict['show_all']:
+        print '\nSaving I(q), f(q), S(q) and G(r) plot of ' + str(dict['pdf_file'])
         fig2, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize = (16,8))
 
         ax1.plot(q_iq[0], iq[(dict['pdf_file'] - 1)-dict['first_file']], label='Frame ' + str(dict['pdf_file'] + 1), color='blue')
