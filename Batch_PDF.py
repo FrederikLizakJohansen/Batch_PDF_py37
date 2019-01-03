@@ -10,7 +10,7 @@ Please see
   Supervisor:   Kirsten M. OE. Jensen
   Department:   Nanoscience Center and Department of Chemistry
   Institute:    University of Copenhagen
-  Date:         11/09/2018
+  Date:         03/01/2019
   ----------------------------------------------------------------------
 """
 import numpy as np
@@ -23,6 +23,8 @@ import ConfigParser
 import h5py
 import heapq
 import sys
+import ast
+import itertools
 
 from prompter import yesno
 from tqdm import tqdm
@@ -110,7 +112,7 @@ def pic_dir(owd, folder_name):
     print 'Directory has been changed:'
     print os.getcwd()   
 
-def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip, load_str):
+def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip, load_str, seq=True):
     """
 
     """
@@ -119,23 +121,41 @@ def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip, load_st
     min_val  = []
     max_val  = []
     names    = []
-    dim = 1
-    lendat1 = 0
+    dim      = 1
+    lendat1  = 0
+    
+    if seq == True:
+        print 'Loading '+str(load_str)+':'
+        for i in tqdm(range(frame_sumstart, frame_sumstart + nr_files)):
+            frame = file_name + str.zfill(str(i), 5) + str(file_type)
+            names.append(frame)
+            frame_data = np.loadtxt(frame, skiprows = line_skip)
+            x_values.append(frame_data[:,0])
+            y_values.append(frame_data[:,1])
+            min_val.append(frame_data[0,0])
+            max_val.append(frame_data[-1,0])
+            
+            lendat2 = len(y_values[i - frame_sumstart])
+            
+            if lendat2 > lendat1:
+                lendat1 = lendat2
+    else:
+        print 'Loading '+str(load_str)+':'
+        index = 0
+        for i in range(0, len(nr_files), 2):  # Takes every second element in list
+            frame = file_name + str.zfill(str(nr_files[i]), 5) + str(file_type)
+            names.append(frame)
+            frame_data = np.loadtxt(frame, skiprows = line_skip)
+            x_values.append(frame_data[:,0])
+            y_values.append(frame_data[:,1])
+            min_val.append(frame_data[0,0])
+            max_val.append(frame_data[-1,0])
 
-    print 'Loading '+str(load_str)+':'
-    for i in tqdm(range(frame_sumstart, frame_sumstart + nr_files)):
-        frame = file_name + str.zfill(str(i), 5) + str(file_type)
-        names.append(frame)
-        frame_data = np.loadtxt(frame, skiprows = line_skip)
-        x_values.append(frame_data[:,0])
-        y_values.append(frame_data[:,1])
-        min_val.append(frame_data[0,0])
-        max_val.append(frame_data[-1,0])
-
-        lendat2 = len(y_values[i - frame_sumstart])
-        if lendat2 > lendat1:
-            lendat1 = lendat2
-
+            lendat2 = len(y_values[index])
+            index += 1
+            if lendat2 > lendat1:
+                lendat1 = lendat2
+                
     if not all(len(i) == len(x_values[0]) for i in x_values):
         print ('Not all lists have same length! You must have used Dioptas ...')
     else:
@@ -280,6 +300,8 @@ if load_dict:
     print '{0:12s} {1} {2}'.format('first_bg', '= ', dict['first_bg'])
     print '{0:12s} {1} {2}'.format('nr_bg_files', '= ', dict['nr_bg_files'])
     print '{0:12s} {1} {2}'.format('bgline_skip', '= ', dict['bgline_skip'])
+    print '{0:12s} {1} {2}'.format('seq_bg', '= ', dict['seq_bg'])
+    print '{0:12s} {1} {2}'.format('bg_info', '= ', dict['bg_info'])
 
     print '\n[Scaling]'
     print '{0:12s} {1} {2}'.format('calib_bg', '= ', dict['calib_bg'])
@@ -289,7 +311,6 @@ if load_dict:
     print '{0:12s} {1} {2}'.format('qnorm', '= ', dict['qnorm'])
 
     print '\n[Directories]'
-    print '{0:12s} {1} {2}'.format('change_dir', '= ', dict['change_dir'])
     print '{0:12s} {1} {2}'.format('data_dir', '= ', dict['data_dir'])
     print '{0:12s} {1} {2}'.format('bg_dir', '= ', dict['bg_dir'])
     print '{0:12s} {1} {2}'.format('cfg_dir', '= ', dict['cfg_dir'])
@@ -313,7 +334,6 @@ if load_dict:
 
     print '\nThe sections [Dictionary] and [Save_Dictionary] are not stored within the Dictionary!'
 
-    #yesno('Type yes to confirm Directory and no to terminate')
     yesno('Do you agree with imported dictionary?')
     print "Imported Dictionary has been verfied. Proceeding!"
     save_dict = False
@@ -322,6 +342,10 @@ elif timeResCon:
     parser = ConfigParser.ConfigParser()
     dict = {}
     parser.read('Batch_PDF_config.ini')
+
+    # [Dictionary]
+    load_dict           = parser.getboolean('Dictionary', 'load_dict')
+    imp_dict            = parser.get('Dictionary', 'imp_dict') 
 
     # [Main]
     dict['load_data']   = parser.getboolean('Main', 'load_data')
@@ -345,8 +369,10 @@ elif timeResCon:
     dict['bg_type']     = parser.get('Background_Data', 'bg_type') 
     dict['first_bg']    = parser.getint('Background_Data', 'first_bg')
     dict['nr_bg_files'] = parser.getint('Background_Data', 'nr_bg_files')
-    dict['bgline_skip'] = parser.getint('Background_Data', 'bgline_skip')                                                                                                                                       
-
+    dict['bgline_skip'] = parser.getint('Background_Data', 'bgline_skip')                                                                                                     
+    dict['seq_bg']      = parser.getboolean('Background_Data', 'seq_bg') 
+    dict['bg_info']     = ast.literal_eval(parser.get('Background_Data', 'bg_info'))  # Gets a list
+    
     # [Scaling]
     dict['calib_bg']    = parser.getboolean('Scaling', 'calib_bg')  
     dict['auto']        = parser.getboolean('Scaling', 'auto') 
@@ -355,7 +381,6 @@ elif timeResCon:
     dict['qnorm']       = parser.get('Scaling', 'qnorm')
 
     # [Directories]
-    dict['change_dir']  = parser.getboolean('Directories', 'change_dir')
     dict['data_dir']    = parser.get('Directories', 'data_dir')                                     
     dict['bg_dir']      = parser.get('Directories', 'bg_dir')
     dict['cfg_dir']     = parser.get('Directories', 'cfg_dir')
@@ -384,6 +409,10 @@ elif timeResCon:
 else:
     dict = {}
 
+    # [Dictionary]
+    load_dict           = False
+    imp_dict            = dictionary.py
+
     # [Main]
     dict['load_data']   = False  # Load hdf5.file
     dict['data_magic']  = True                                                                                  #Check all data, and makes sure it matches in lengths and size
@@ -406,6 +435,8 @@ else:
     dict['first_bg']    = 0                                                                                     #First file, 0 = 1.
     dict['nr_bg_files'] = 3                                                                                 #Number of files you want to import
     dict['bgline_skip'] = 16    
+    dict['seq_bg']      = False
+    dict['bgline_skip'] = [1,2]    
 
     #[Scaling]
     dict['calib_bg']    = True                                                                                  #If false, autoscale at qnorm   
@@ -415,7 +446,6 @@ else:
     dict['qnorm']       = 22                                                                                    #Define the point in q, where the background should line up with the data
 
     # [Directories]
-    dict['change_dir']  = True                                                                                  #True if you want to change directory
     dict['data_dir']    = 'C:\Users\opadn\Documents\Skolefiler\KU_Nanoscience\Kandidat\Masters\Data_WO\BA_WCl6_160_p'   #Insert path to a new directory                                     
     dict['bg_dir']      = 'C:\Users\opadn\Documents\Skolefiler\KU_Nanoscience\Kandidat\Masters\Data_WO\BA_BKG_160_p'
     dict['cfg_dir']     = 'C:\Users\opadn\Documents\Skolefiler\KU_Nanoscience\Kandidat\Masters\TimeResolved_scripts'
@@ -429,7 +459,7 @@ else:
     dict['show_all']    = True                                                                                  #Shows iq, sq, fq and Gr for a specific file, pdf_file
     dict['save_pics']   = True
     dict['pdf_file']    = -1                                                                                    #Show the pdf of a specific file        
-    dict['timeframe']  = 2                                                                                     # Time for every measurement in seconds
+    dict['timeframe']   = 2                                                                                     # Time for every measurement in seconds
     dict['PDF_name']    = 'WCl6_160_p'
 
     # [3D_Plot]
@@ -440,6 +470,41 @@ else:
     # [Save_Dictionary]
     save_dict           = True
     dict_name           = str('XXX_directory')
+
+#---------------------------------------------------------------------------------------------------
+#   
+# Checking settings
+#
+#---------------------------------------------------------------------------------------------------
+
+error = 0
+
+if dict['seq_bg'] and dict['make_cfg'] == False:
+    if dict['bg_info'][1] != 1:
+        print 'bg_info is wrong!'
+        print 'Second element needs to be 1 but is ' + str(dict['bg_info'][1]) + '!\n' 
+        error = 1
+
+    if dict['bg_info'][-1] > dict['first_file'] + dict['nr_files']:
+        print 'bg_info is wrong!'
+        print str(dict['bg_info'][-1]) + ' is larger than ' + str(dict['first_file'] + dict['nr_files'])
+        error = 1
+
+    if len(dict['bg_info']) % 2 != 0:
+        print 'bg_info is wrong!'
+        print 'The length needs to be even but is currently ' + str(len(dict['bg_info'])) + '!\n'
+        error = 1
+    
+    j = 1
+    for i in range(1, len(dict['bg_info']), 2):
+        if dict['bg_info'][i] < dict['bg_info'][j]:
+            print 'bg_info is wrong!'
+            print str(dict['bg_info'][i]) + ' must be larger than ' + str(dict['bg_info'][j]) + '!\n'
+            error = 1
+        j = i
+
+if error == 1:
+    sys.exit()
 
 #---------------------------------------------------------------------------------------------------
 #   
@@ -456,7 +521,7 @@ totime = dict['timeframe']/60
 #
 #---------------------------------------------------------------------------------------------------
 
-if dict['load_data'] == False:
+if dict['load_data'] == False and dict['make_cfg'] == False:
     print '\nLoading HDF5 files:'
     pic_dir(dict['cfg_dir'], 'data_binary_')
     
@@ -475,30 +540,39 @@ if dict['load_data'] == False:
     same_len = 0
     steps = len(xdata_set)
     dict['save_data'] = False
-else:
+elif dict['make_cfg'] == False:
     print '\nInitilazing import of files!'
-    if dict['change_dir']:
+   
+    if dict['seq_bg'] == False:           
         os.chdir(dict['data_dir'])
         print 'Directory has been changed:'
         print os.getcwd()
-
-    xdata_set, ydata_set, data_dim, min_val_data, max_val_data, data_len, data_name = read_data(dict['first_file'], dict['nr_files'], dict['file_name'], dict['file_type'], dict['line_skip'], 'Data files')
-   
-    if dict['change_dir']:
+        xdata_set, ydata_set, data_dim, min_val_data, max_val_data, data_len, data_name = read_data(dict['first_file'], dict['nr_files'], dict['file_name'], dict['file_type'], dict['line_skip'], 'Data files')
+        print data_len 
         os.chdir(dict['bg_dir'])
         print 'Directory has been changed:'
         print os.getcwd()
+        xbg_set, ybg_set, bg_dim, min_val_bg, max_val_bg, bg_len, bg_name = read_data(dict['first_bg'], dict['nr_bg_files'], dict['bg_file'], dict['bg_type'], dict['bgline_skip'], 'Background files')  
 
-    xbg_set, ybg_set, bg_dim, min_val_bg, max_val_bg, bg_len, bg_name = read_data(dict['first_bg'], dict['nr_bg_files'], dict['bg_file'], dict['bg_type'], dict['bgline_skip'], 'Background files')  
-
+    else:
+        os.chdir(dict['data_dir'])
+        print 'Directory has been changed:'
+        print os.getcwd()     
+        xdata_set, ydata_set, data_dim, min_val_data, max_val_data, data_len, data_name = read_data(dict['first_file'], dict['nr_files'], dict['file_name'], dict['file_type'], dict['line_skip'], 'Data files')
+          
+        os.chdir(dict['bg_dir'])
+        print 'Directory has been changed:'
+        print os.getcwd()
+        xbg_set, ybg_set, bg_dim, min_val_bg, max_val_bg, bg_len, bg_name = read_data(dict['first_bg'], dict['bg_info'], dict['bg_file'], dict['bg_type'], dict['bgline_skip'], 'Background files', seq=False)  
+   
     if bg_len > data_len:
         steps = bg_len * 2
     elif bg_len < data_len:
         steps = data_len * 2
     else:
-        steps = data_len*2#data_len
+        steps = data_len*2  # Data_len
 
-    if dict['data_magic']:                                                                                      #Find highest min value and lowest max value for interpolation
+    if dict['data_magic']:  # Find highest min value and lowest max value for interpolation
         xmin = 0
         xmax = 0
 
@@ -513,8 +587,11 @@ else:
             xmax = max_val_bg   
 
         ydata_set_int = np.zeros((dict['nr_files'], steps))
-        ybg_set_int = np.zeros((dict['nr_bg_files'], steps))
-        
+        if dict['seq_bg'] == False:
+            ybg_set_int = np.zeros((dict['nr_bg_files'], steps))
+        else:
+            ybg_set_int = np.zeros((len(dict['bg_info'])/2, steps))
+
         same_len = 1
         if data_dim == 0 and bg_dim == 1:
             print '\n', 'Background files vary in length.'
@@ -524,9 +601,14 @@ else:
                 ydata_set_int[i] = y_int
 
             print 'Interpolating background files:'
-            for i in tqdm(range(0, dict['nr_bg_files'])):    
-                _, ybg_int = interpol(xmin, xmax, steps, xbg_set[i], ybg_set[i])
-                ybg_set_int[i] = ybg_int
+            if dict['seq_bg'] == False:
+                for i in tqdm(range(0, dict['nr_bg_files'])):    
+                    _, ybg_int = interpol(xmin, xmax, steps, xbg_set[i], ybg_set[i])
+                    ybg_set_int[i] = ybg_int
+            else:
+                for i in tqdm(range(0, len(dict['bg_info'])/2)):    
+                    _, ybg_int = interpol(xmin, xmax, steps, xbg_set[i], ybg_set[i])
+                    ybg_set_int[i] = ybg_int
 
         elif data_dim == 1 and bg_dim == 0:
             print '\n', 'Data files vary in length.'
@@ -536,10 +618,15 @@ else:
                 ydata_set_int[i] = y_int
 
             print 'Interpolating background files:'
-            for i in tqdm(range(0, dict['nr_bg_files'])):    
-                _, ybg_int = interpol(xmin, xmax, steps, xbg_set, ybg_set[i])
-                ybg_set_int[i] = ybg_int
-
+            if dict['seq_bg'] == False:
+                for i in tqdm(range(0, dict['nr_bg_files'])):    
+                    _, ybg_int = interpol(xmin, xmax, steps, xbg_set, ybg_set[i])
+                    ybg_set_int[i] = ybg_int
+            else:
+                for i in tqdm(range(0, len(dict['bg_info'])/2)):    
+                    _, ybg_int = interpol(xmin, xmax, steps, xbg_set, ybg_set[i])
+                    ybg_set_int[i] = ybg_int
+ 
         elif data_dim == 1 and bg_dim == 1:
             print '\n', 'Size of data and background array does not match.'
             print 'Interpolating data files:'
@@ -548,10 +635,15 @@ else:
                 ydata_set_int[i] = y_int
 
             print 'Interpolating bachground files:'
-            for i in tqdm(range(0, dict['nr_bg_files'])):    
-                _, ybg_int = interpol(xmin, xmax, steps, xbg_set[i], ybg_set[i])
-                ybg_set_int[i] = ybg_int
-
+            if dict['seq_bg'] == False:
+                for i in tqdm(range(0, dict['nr_bg_files'])):    
+                    _, ybg_int = interpol(xmin, xmax, steps, xbg_set[i], ybg_set[i])
+                    ybg_set_int[i] = ybg_int
+            else:
+                for i in tqdm(range(0, len(dict['bg_info'])/2)):    
+                    _, ybg_int = interpol(xmin, xmax, steps, xbg_set[i], ybg_set[i])
+                    ybg_set_int[i] = ybg_int
+          
         else:
             print '\nAll data have same dimension'
             
@@ -572,25 +664,46 @@ else:
                     ydata_set_int[i] = y_int
 
                 print 'Interpolating background files:'
-                for i in tqdm(range(0, dict['nr_bg_files'])):    
-                    _, ybg_int = interpol(xmin, xmax, steps, xbg_set, ybg_set[i])
-                    ybg_set_int[i] = ybg_int
+                if dict['seq_bg'] == False:
+                    for i in tqdm(range(0, dict['nr_bg_files'])):    
+                        _, ybg_int = interpol(xmin, xmax, steps, xbg_set, ybg_set[i])
+                        ybg_set_int[i] = ybg_int
+                else:
+                    for i in tqdm(range(0, len(dict['bg_info'])/2)):    
+                        _, ybg_int = interpol(xmin, xmax, steps, xbg_set, ybg_set[i])
+                        ybg_set_int[i] = ybg_int
 
         xdata_set = xdata_set_int
         ydata_set = ydata_set_int
         xbg_set = xdata_set
         ybg_set = ybg_set_int  
-        
-    if dict['sumstep'] > 1:
+
+    if len(dict['bg_info'])/2 < dict['nr_files'] and dict['seq_bg'] == True:  # Makes a new matrix with backgrounds
+        test_bg   = []
+        extend    = dict['bg_info'][3::2]  # Starts at third index and then takes every second
+        bg_index  = 0
+        start_val = 0
+        for i in extend:
+            for j in range((i-start_val)-1):
+                test_bg.append(ybg_set[bg_index])
+            bg_index += 1
+            start_val = i-1
+            if i == extend[-1]:
+                for i in range((dict['nr_files']-extend[-1])+1):
+                    test_bg.append(ybg_set[-1])    
+                
+        ybg_set = np.array(test_bg)
+
+    if dict['sumstep'] > 1 and dict['seq_bg'] == False:
         ydata_set = sum_data(dict['nr_files'], dict['sumstep'], ydata_set)
         ybg_set = sum_data(dict['nr_bg_files'], dict['sumstep'], ybg_set)
         dict['nr_files'] = (dict['nr_files']/dict['sumstep'])+1
         dict['nr_bg_files'] = (dict['nr_bg_files']/dict['sumstep'])+1
 
-    if same_len == 1:
+    if same_len == 1 and dict['seq_bg'] == False:
         ybg_set = np.reshape(ybg_set, (dict['nr_bg_files'], steps))
 
-    if dict['nr_files'] > dict['nr_bg_files']:                                                                          #If there are less background files the data files exstend bg matrix with last background row til they match
+    if dict['nr_files'] > dict['nr_bg_files'] and dict['seq_bg'] == False:  # If there are less background files the data files exstend bg matrix with last background row til they match
         add_bgy = ybg_set[-1]
         add_bgy = np.reshape(add_bgy, (1, steps))
 
@@ -598,10 +711,11 @@ else:
         for i in tqdm(range(abs(dict['nr_files'] - dict['nr_bg_files']))):
             ybg_set = np.concatenate((ybg_set, add_bgy), axis = 0)
      
-if dict['save_data']:
+if dict['save_data'] and dict['make_cfg'] == False:
     print '\nSaving data!'
     print '\tSaved data is not background subtrackted.\n'
-
+    print '\tSaved data does not contain headers!'
+   
     pic_dir(dict['cfg_dir'], 'data_binary_')
    
     hdf5_data = h5py.File('raw_data.hdf5', 'w') 
@@ -618,9 +732,9 @@ if dict['save_data']:
 #
 #---------------------------------------------------------------------------------------------------
 
-if dict['make_cfg'] and dict['load_dict'] == False:
+if dict['make_cfg'] and load_dict == False:
     # Values for autogen sfg
-    cfg_name    = 'pdfgetx3_new'
+    cfg_name    = str(dict['cfg_file'])
 
     dataformat  = 'QA'
     outputtypes = 'iq, sq, fq, gr'
@@ -636,17 +750,16 @@ if dict['make_cfg'] and dict['load_dict'] == False:
 
     rpoly = 0.9
     
-    print '\nNew cfg file is being constructed'
+    print '\nNew cfg file has been created'
     os.chdir(dict['cfg_dir'])
     print 'Directory has been changed:'
     print os.getcwd()
     NAMES  = np.array(['[DEFAULT]','dataformat', 'outputtypes', 'composition', 'qmaxinst', 'qmin', 'qmax', 'rmin', 'rmax', 'rstep', 'rpoly'])
     FLOATS = np.array(['',dataformat, outputtypes, composition, qmaxinst, qmin, qmax, rmin, rmax, rstep, rpoly])
     DAT =  np.column_stack((NAMES, FLOATS))
-    np.savetxt(cfg_name + '.cfg', DAT, delimiter=" = ", fmt="%s") 
-    cfg = loadPDFConfig(cfg_name + '.cfg')
-    th_q_low  = cfg.qmin * 10
-    th_q_high = cfg.qmax * 10
+    np.savetxt(cfg_name, DAT, delimiter=" = ", fmt="%s") 
+    print 'A cfg file has been created, ' + str(dict['cfg_file'])
+    sys.exit()
 
 elif dict['PDF']:
     print '\nCfg file is being importet.'
@@ -968,24 +1081,44 @@ if dict['PDF']:
     r = np.array(r)
     gr = np.array(gr)   
 
-    if dict['gen_PDF_file'] == True or dict['gen_fq_file'] == True or dict['gen_iq_file'] == True:
-        head_name  = np.array(['# Composition', '# qmaxinst', '# qmin', '# qmax', '# rmin', '# rmax', '# Nyquist', '# rstep', '# rpoly', '# Background','# Scaling', ''])
-        head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, '', '',''])
-        header     = np.column_stack((head_name, head_vals))
-    
     if dict['gen_PDF_file']:
         print "\nGenerating G(r) files!"
         pic_dir(dict['cfg_dir'], 'Gr_')
-        for i in tqdm(range(dict['nr_files'])):
-            head_name  = np.array(['# Composition', '# qmaxinst', '# qmin', '# qmax', '# rmin', '# rmax', '# Nyquist', '# rstep', '# rpoly', '# Data', '# Background','# Scaling', '#'])
-            
+        head_name  = np.array(['# Composition', '# qmaxinst', '# qmin', '# qmax', '# rmin', '# rmax', '# Nyquist', '# rstep', '# rpoly', '# Data', '# Background','# Scaling', '#'])
+        index = 0
+        k     = 0
+        for i in tqdm(range(dict['nr_files'])):            
             if (dict['calib_bg'] == False and dict['auto'] == True) or dict['calib_bg'] == False:
-                head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, dict['file_name'], dict['bg_file'], scale_list[i],''])
+                if dict['seq_bg']:
+                    if i == extend[index] -1 and not i == extend[-1] -1:
+                        index += 1
+                        k += 1
+                    elif i == extend[-1] -1:
+                        k = len(extend)
+                    head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, data_name[i], bg_name[k], scale_list[i],''])
+                
+                else: 
+                    k = i
+                    if i > dict['nr_bg_files'] - 1:
+                        k = dict['nr_bg_files'] - 1
+                    head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, data_name[i], bg_name[k], scale_list[i],''])
+            
             else:
-                head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, dict['file_name'], dict['bg_file'], scale, ''])
-
+                if dict['seq_bg']:
+                    if i == extend[index] -1 and not i == extend[-1] -1:
+                        index += 1
+                        k += 1
+                    elif i == extend[-1] -1:
+                        k = len(extend)
+                    head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, data_name[i], bg_name[k], scale,''])
+                
+                else: 
+                    k = i
+                    if i > dict['nr_bg_files'] - 1:
+                        k = dict['nr_bg_files'] - 1
+                    head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, data_name[i], bg_name[k], scale,''])
+ 
             header     = np.column_stack((head_name, head_vals))
-
             saving_dat = np.column_stack((r[i],gr[i])) 
             saving_dat = (np.vstack(((header).astype(str), (saving_dat).astype(str))))
             np.savetxt(dict['file_name'] + str(i).zfill(3) +'.gr', saving_dat, fmt='%s')
@@ -993,7 +1126,40 @@ if dict['PDF']:
     if dict['gen_fq_file']:
         print "\nGenerating F(q) files!"
         pic_dir(dict['cfg_dir'], 'Fq_')
+        index = 0
+        k     = 0
         for i in tqdm(range(dict['nr_files'])):
+            if (dict['calib_bg'] == False and dict['auto'] == True) or dict['calib_bg'] == False:
+                if dict['seq_bg']:
+                    if i == extend[index] -1 and not i == extend[-1] -1:
+                        index += 1
+                        k += 1
+                    elif i == extend[-1] -1:
+                        k = len(extend)
+                    head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, data_name[i], bg_name[k], scale_list[i],''])
+                
+                else: 
+                    k = i
+                    if i > dict['nr_bg_files'] - 1:
+                        k = dict['nr_bg_files'] - 1
+                    head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, data_name[i], bg_name[k], scale_list[i],''])
+            
+            else:
+                if dict['seq_bg']:
+                    if i == extend[index] -1 and not i == extend[-1] -1:
+                        index += 1
+                        k += 1
+                    elif i == extend[-1] -1:
+                        k = len(extend)
+                    head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, data_name[i], bg_name[k], scale,''])
+                
+                else: 
+                    k = i
+                    if i > dict['nr_bg_files'] - 1:
+                        k = dict['nr_bg_files'] - 1
+                    head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, data_name[i], bg_name[k], scale,''])
+
+            header     = np.column_stack((head_name, head_vals))           
             saving_dat = np.column_stack((q_fq[i],fq[i])) 
             saving_dat = (np.vstack(((header).astype(str), (saving_dat).astype(str))))
             np.savetxt(dict['file_name'] + str(i).zfill(3) +'.fq', saving_dat, fmt='%s')
@@ -1001,7 +1167,39 @@ if dict['PDF']:
     if dict['gen_iq_file']:
         print "\nGenerating I(q) files!"
         pic_dir(dict['cfg_dir'], 'Iq_')
+        index = 0
+        k     = 0
         for i in tqdm(range(dict['nr_files'])):
+            if (dict['calib_bg'] == False and dict['auto'] == True) or dict['calib_bg'] == False:
+                if dict['seq_bg']:
+                    if i == extend[index] -1 and not i == extend[-1] -1:
+                        index += 1
+                        k += 1
+                    elif i == extend[-1] -1:
+                        k = len(extend)
+                    head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, data_name[i], bg_name[k], scale_list[i],''])
+                
+                else: 
+                    k = i
+                    if i > dict['nr_bg_files'] - 1:
+                        k = dict['nr_bg_files'] - 1
+                    head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, data_name[i], bg_name[k], scale_list[i],''])
+            
+            else:
+                if dict['seq_bg']:
+                    if i == extend[index] -1 and not i == extend[-1] -1:
+                        index += 1
+                        k += 1
+                    elif i == extend[-1] -1:
+                        k = len(extend)
+                    head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, data_name[i], bg_name[k], scale,''])
+                
+                else: 
+                    k = i
+                    if i > dict['nr_bg_files'] - 1:
+                        k = dict['nr_bg_files'] - 1
+                    head_vals  = np.array([cfg.composition, cfg.qmaxinst, cfg.qmin, cfg.qmax, cfg.rmin, cfg.rmax, dict['Nyquist'], cfg.rstep, cfg.rpoly, data_name[i], bg_name[k], scale,''])
+            header     = np.column_stack((head_name, head_vals))    
             saving_dat = np.column_stack((q_iq[i],iq[i])) 
             saving_dat = (np.vstack(((header).astype(str), (saving_dat).astype(str))))
             np.savetxt(dict['file_name'] + str(i).zfill(3) +'.iq', saving_dat, fmt='%s')
