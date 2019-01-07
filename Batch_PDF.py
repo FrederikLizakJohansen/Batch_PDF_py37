@@ -240,6 +240,23 @@ def sum_data(nr_sum, sumstep, data):
     sum_mat = np.array(sum_mat)
     return sum_mat  
 
+def dir_check(folderDir, folderName='', fileName='', folder=True):
+    '''
+    Checks if a file or folder exists.
+    Returns 1 if it exists and 0 if not.
+    '''
+    exists = 0
+    if folder:
+        if os.path.isdir(str(folderDir+'/'+folderName)):
+            exists = 1
+        else:
+            exists = 0
+    else:
+        if os.path.exists(str(folderDir+'/'+folderName+'/'+fileName)):
+            exists = 1
+        else:
+            exists = 0  
+    return exists 
 #---------------------------------------------------------------------------------------------------
 #   
 # Config file and Dictionary
@@ -332,7 +349,9 @@ if load_dict:
 
     print '\nThe sections [Dictionary] and [Save_Dictionary] are not stored within the Dictionary!'
 
-    yesno('Do you agree with imported dictionary?')
+    if yesno('Do you agree with imported dictionary?') == False:
+        sys.exit()
+
     print "Imported Dictionary has been verfied. Proceeding!"
     save_dict = False
 
@@ -375,7 +394,7 @@ elif timeResCon:
     dict['calib_bg']    = parser.getboolean('Scaling', 'calib_bg')  
     dict['auto']        = parser.getboolean('Scaling', 'auto') 
     dict['sumstep']     = parser.getint('Scaling', 'sumstep')
-    dict['sumstep_bg']     = parser.getint('Scaling', 'sumstep_bg')
+    dict['sumstep_bg']  = parser.getint('Scaling', 'sumstep_bg')
     dict['bg_scaling']  = parser.getfloat('Scaling', 'bg_scaling')
     dict['qnorm']       = parser.get('Scaling', 'qnorm')
 
@@ -479,7 +498,7 @@ else:
 
 error = 0
 
-if dict['seq_bg'] and dict['make_cfg'] == False:
+if dict['seq_bg'] and dict['make_cfg'] == False and dict['sumstep_bg'] == 1 and dict['sumstep'] == 1:
     if dict['bg_info'][1] != 1:
         print 'bg_info is wrong!'
         print 'Second element needs to be 1 but is ' + str(dict['bg_info'][1]) + '!\n' 
@@ -503,51 +522,98 @@ if dict['seq_bg'] and dict['make_cfg'] == False:
             error = 1
         j = i
 
-if dict['seq_bg'] and (dict['sumstep'] > 1 or dict['sumstep_bg'] > 1):
-    print 'seq_bg can not be set to True if either sumstep or sumstep_bg is above 1!'
-    error = 1
-
-if dict['nr_bg_files'] > dict['nr_files'] and dict['sumstep_bg'] > 1:  # Checking that the user do not have more bg files than data files
+if dict['nr_bg_files'] > dict['nr_files'] and dict['sumstep_bg'] > 1 and dict['seq_bg'] == False:  # Checking that the user do not have more bg files than data files
     print 'You can not have more background files than'
     error = 1
 
-if dict['sumstep'] > dict['nr_files'] or dict['sumstep_bg'] > dict['nr_bg_files']:  # Checking that the user dont sum more files than given
+if dict['sumstep'] > dict['nr_files'] or dict['sumstep_bg'] > dict['nr_bg_files'] and dict['seq_bg'] == False:  # Checking that the user dont sum more files than given
     print 'You can not sum more files then you have!'
     print '\t Data: summing ', dict['sumstep'], ' files, you gave ', dict['nr_files']
     print '\t Background: summing ', dict['sumstep_bg'], ' files, you gave ', dict['nr_bg_files'], '\n' 
     error = 1
 
-if dict['nr_files'] % dict['sumstep'] != 0 and dict['nr_bg_files'] % dict['sumstep_bg'] != 0:  # Checking dimensions of data and background after summation 
+if dict['nr_files'] % dict['sumstep'] != 0 and dict['nr_bg_files'] % dict['sumstep_bg'] != 0 and dict['seq_bg'] == False:  # Checking dimensions of data and background after summation 
     if (dict['nr_files'] / dict['sumstep'])+1 < (dict['nr_bg_files'] / dict['sumstep_bg'])+1:
         print 'After summation you have more background files than data files!'
         print '\t', 'Data < Background'
         print '\t',(dict['nr_files'] / dict['sumstep'])+1,' < ',(dict['nr_bg_files'] / dict['sumstep_bg'])+1,'\n'  
         error = 1
-
-elif dict['nr_files'] % dict['sumstep'] == 0 and dict['nr_bg_files'] % dict['sumstep_bg'] != 0:
+elif dict['nr_files'] % dict['sumstep'] == 0 and dict['nr_bg_files'] % dict['sumstep_bg'] != 0 and dict['seq_bg'] == False:
     if (dict['nr_files'] / dict['sumstep']) < (dict['nr_bg_files'] / dict['sumstep_bg'])+1:
         print 'After summation you have more background files than data files!'
         print '\t', 'Data < Background'
         print '\t',(dict['nr_files'] / dict['sumstep']),' < ',(dict['nr_bg_files'] / dict['sumstep_bg'])+1,'\n'  
         error = 1
-
-elif dict['nr_files'] % dict['sumstep'] != 0 and dict['nr_bg_files'] % dict['sumstep_bg'] == 0:
+elif dict['nr_files'] % dict['sumstep'] != 0 and dict['nr_bg_files'] % dict['sumstep_bg'] == 0 and dict['seq_bg'] == False:
     if (dict['nr_files'] / dict['sumstep'])+1 < (dict['nr_bg_files'] / dict['sumstep_bg']):
         print 'After summation you have more background files than data files!'
         print '\t', 'Data < Background'       
         print '\t',(dict['nr_files'] / dict['sumstep'])+1,' < ',(dict['nr_bg_files'] / dict['sumstep_bg']),'\n'  
         error = 1
-
 else:
-     if (dict['nr_files'] / dict['sumstep']) < (dict['nr_bg_files'] / dict['sumstep_bg']):
+     if (dict['nr_files'] / dict['sumstep']) < (dict['nr_bg_files'] / dict['sumstep_bg']) and dict['seq_bg'] == False:
         print 'After summation you have more background files than data files!'
         print '\t', 'Data < Background'       
         print '\t',(dict['nr_files'] / dict['sumstep']),' < ',(dict['nr_bg_files'] / dict['sumstep_bg']),'\n'  
         error = 1
-    
+
+if dict['sumstep'] * dict['bg_info'][-1] > dict['sumstep_bg'] * dict['nr_files'] and dict['seq_bg']:
+    print 'Background files exeed data files after summation!'
+    print 'Reconsider the number of input files and how they are summed!\n'
+    error = 1
+
 if error == 1:
     print 'THE PROGRAM HAS BEEN TERMINATED!!!'
     sys.exit()
+
+#---------------------------------------------------------------------------------------------------
+#   
+# Checking For existing files
+#
+#--------------------------------------------------------------------------------------------------- 
+
+exists = np.zeros(7)
+
+if dict['save_data'] and dict['make_cfg'] == False:
+    exists[0] = dir_check(dict['cfg_dir'], folderName='data_binary_'+str(dict['file_name']))
+   
+if dict['gen_PDF_file'] and dict['make_cfg'] == False:
+    exists[1] = dir_check(dict['cfg_dir'], folderName='Gr_'+str(dict['file_name']))
+
+if dict['gen_fq_file'] and dict['make_cfg'] == False:
+    exists[2] = dir_check(dict['cfg_dir'], folderName='Fq_'+str(dict['file_name']))
+
+if dict['gen_iq_file'] and dict['make_cfg'] == False:
+    exists[3] = dir_check(dict['cfg_dir'], folderName='Iq_'+str(dict['file_name']))
+
+if dict['make_cfg']:
+    exists[4] = dir_check(dict['cfg_dir'], fileName=dict['cfg_file'], folder=False)
+
+if dict['save_pics'] and dict['make_cfg'] == False:
+    exists[5] = dir_check(dict['cfg_dir'], folderName='Pictures_'+str(dict['file_name']))
+
+if save_dict and dict['make_cfg'] == False:
+    exists[6] = dir_check(dict['cfg_dir'], folderName='Pictures_'+str(dict['file_name']), fileName=dict_name+'.py', folder=False)
+
+if np.sum(exists) > 0:
+    print 'Already existing:'
+    if exists[0] == 1:
+        print '\tdata_binary_'+str(dict['file_name'])
+    if exists[1] == 1:
+        print '\tGr_'+str(dict['file_name'])
+    if exists[2] == 1:
+        print '\tFq_'+str(dict['file_name'])
+    if exists[3] == 1:
+        print '\tIq_'+str(dict['file_name'])
+    if exists[4] == 1:
+        print '\t'+dict['cfg_file']
+    if exists[5] == 1:
+        print '\tPicture_'+str(dict['file_name'])
+    if exists[6] == 1:
+        print '\t'+str(dict_name)
+    print '\nIt is possible that you are going to overwrite data!'
+    if yesno('Do you want to continue?') == False:
+        sys.exit()
 
 #---------------------------------------------------------------------------------------------------
 #   
@@ -579,7 +645,8 @@ if dict['load_data'] == False and dict['make_cfg'] == False:
 
     dict['data_magic'] = False
     dict['sumstep'] = 1
-    dict['nr_bg_files'] = dict['nr_files']
+    dict['nr_files'] = len(ydata_set)  # Sets the correct length of the array
+    dict['nr_bg_files'] = dict['nr_files']  # 
     same_len = 0
     steps = len(xdata_set)
     dict['save_data'] = False
@@ -722,7 +789,7 @@ elif dict['make_cfg'] == False:
         xbg_set = xdata_set
         ybg_set = ybg_set_int  
 
-    if len(dict['bg_info'])/2 < dict['nr_files'] and dict['seq_bg'] == True:  # Makes a new matrix with backgrounds
+    if dict['bg_info'][-1]*dict['sumstep'] <= dict['nr_files']*dict['sumstep_bg'] and dict['seq_bg'] == True:  # Makes a new matrix with backgrounds
         ph_bg   = []
         extend    = dict['bg_info'][3::2]  # Starts at third index and then takes every second
         bg_index  = 0
@@ -733,10 +800,12 @@ elif dict['make_cfg'] == False:
             bg_index += 1
             start_val = i-1
             if i == extend[-1]:
-                for i in range((dict['nr_files']-extend[-1])+1):
-                    ph_bg.append(ybg_set[-1])    
-                
-        ybg_set = np.array(ph_bg)
+                if dict['sumstep'] == 1 and dict['sumstep_bg'] == 1: 
+                    for i in range((dict['nr_files']-extend[-1])+1):
+                        ph_bg.append(ybg_set[-1])   
+                    ybg_set = np.array(ph_bg)
+                else:
+                    ph_bg.append(ybg_set[-1]) 
    
     if dict['sumstep'] > 1 and dict['seq_bg'] == False:  # Summing sumstep of data files together
         print 'Data files are beeing summed!!'
@@ -747,6 +816,29 @@ elif dict['make_cfg'] == False:
         print 'Background files are beeing summed!!'
         ybg_set = sum_data(dict['nr_bg_files'], dict['sumstep_bg'], ybg_set)   
         dict['nr_bg_files'] = len(ybg_set)
+
+    if (dict['sumstep'] > 1 and dict['sumstep_bg'] > 1) and dict['seq_bg']:  # Summing both seq_bg and data
+        ydata_set = sum_data(dict['nr_files'], dict['sumstep'], ydata_set)
+        for i in range((len(ydata_set)*dict['sumstep_bg'])-len(ph_bg)):
+            ph_bg.append(ph_bg[-1])       
+        ph_bg = sum_data(len(ph_bg), dict['sumstep_bg'], ph_bg)
+        dict['nr_files'] = len(ydata_set)
+        ybg_set = np.array(ph_bg)
+
+    elif dict['sumstep'] > 1 and dict['seq_bg']:  # Sums data but not seg_bg
+        ydata_set = sum_data(dict['nr_files'], dict['sumstep'], ydata_set)
+        for i in range(len(ydata_set)-len(ph_bg)):
+            ph_bg.append(ph_bg[-1])
+        ybg_set = np.array(ph_bg)
+        dict['nr_files'] = len(ydata_set)
+     
+    elif dict['sumstep_bg'] > 1 and dict['seq_bg']:  # Sums seg_bg but not data
+        print 'hej'
+        for i in range((len(ydata_set)*dict['sumstep_bg'])-len(ph_bg)):
+            ph_bg.append(ph_bg[-1])       
+        ph_bg = sum_data(len(ph_bg), dict['sumstep_bg'], ph_bg)
+        dict['nr_files'] = len(ydata_set)
+        ybg_set = np.array(ph_bg)       
 
     if same_len == 1 and dict['seq_bg'] == False:
         ybg_set = np.reshape(ybg_set, (len(ybg_set), steps))
@@ -823,7 +915,7 @@ elif dict['PDF']:
         th_q_high = cfg.qmax * 10
     else:
         th_q_low  = cfg.qmin
-        th_q_high = cgf.qmax
+        th_q_high = cfg.qmax
 
 else:
     print 'Lowest q (in AA) value that will be tested for negative values:'
@@ -1091,7 +1183,7 @@ if dict['PDF']:
 
     r = np.array(r)
     gr = np.array(gr)   
-    if dict['gen_PDF_file']:
+    if dict['gen_PDF_file'] and dict['load_data'] == True:
         print "\nGenerating G(r) files!"
         pic_dir(dict['cfg_dir'], 'Gr_')
         head_name  = np.array(['# Composition', '# qmaxinst', '# qmin', '# qmax', '# rmin', '# rmax', '# Nyquist', '# rstep', '# rpoly', '# Data', '# Background','# Scaling', '#'])
@@ -1133,7 +1225,7 @@ if dict['PDF']:
             saving_dat = (np.vstack(((header).astype(str), (saving_dat).astype(str))))
             np.savetxt(dict['file_name'] + str(i).zfill(3) +'.gr', saving_dat, fmt='%s')
 
-    if dict['gen_fq_file']:
+    if dict['gen_fq_file'] and dict['load_data'] == True:
         print "\nGenerating F(q) files!"
         pic_dir(dict['cfg_dir'], 'Fq_')
         index = 0
@@ -1174,7 +1266,7 @@ if dict['PDF']:
             saving_dat = (np.vstack(((header).astype(str), (saving_dat).astype(str))))
             np.savetxt(dict['file_name'] + str(i).zfill(3) +'.fq', saving_dat, fmt='%s')
 
-    if dict['gen_iq_file']:
+    if dict['gen_iq_file'] and dict['load_data'] == True:
         print "\nGenerating I(q) files!"
         pic_dir(dict['cfg_dir'], 'Iq_')
         index = 0
@@ -1213,6 +1305,30 @@ if dict['PDF']:
             saving_dat = np.column_stack((q_iq[i],iq[i])) 
             saving_dat = (np.vstack(((header).astype(str), (saving_dat).astype(str))))
             np.savetxt(dict['file_name'] + str(i).zfill(3) +'.iq', saving_dat, fmt='%s')
+
+    if dict['gen_PDF_file'] and dict['load_data'] == False:
+        print "\nGenerating G(r) files!"
+        pic_dir(dict['cfg_dir'], 'Gr_')
+        for i in tqdm(range(dict['nr_files'])):
+            saving_dat = np.column_stack((r[i],gr[i])) 
+            np.savetxt(dict['file_name'] + str(i).zfill(3) +'.gr', saving_dat, fmt='%s')
+        print 'Files are saved without header!'
+
+    if dict['gen_fq_file'] and dict['load_data'] == False:
+        print "\nGenerating F(q) files!"
+        pic_dir(dict['cfg_dir'], 'Fq_')
+        for i in tqdm(range(dict['nr_files'])):
+            saving_dat = np.column_stack((q_fq[i],fq[i])) 
+            np.savetxt(dict['file_name'] + str(i).zfill(3) +'.fq', saving_dat, fmt='%s')
+        print 'Files are saved without header!'
+
+    if dict['gen_iq_file'] and dict['load_data'] == False:
+        print "\nGenerating I(q) files!"
+        pic_dir(dict['cfg_dir'], 'Iq_')
+        for i in tqdm(range(dict['nr_files'])):
+            saving_dat = np.column_stack((q_iq[i],iq[i])) 
+            np.savetxt(dict['file_name'] + str(i).zfill(3) +'.iq', saving_dat, fmt='%s')
+        print 'Files are saved without header!'
 
     timeresolved = (np.array(range(len(y_diff))) + dict['first_file'])*totime 
     timeresolved_q = (np.array(range(len(fq))) + dict['first_file'])*totime
