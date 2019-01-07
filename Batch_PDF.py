@@ -13,8 +13,6 @@ Please see
   Date:         03/01/2019
   ----------------------------------------------------------------------
 """
-import numpy as np
-import matplotlib.pyplot as plt
 import os
 import time
 import errno
@@ -24,7 +22,9 @@ import h5py
 import heapq
 import sys
 import ast
-#import itertools
+
+import numpy as np
+import matplotlib.pyplot as plt
 
 from prompter import yesno
 from tqdm import tqdm
@@ -101,7 +101,6 @@ def pic_dir(owd, folder_name):
     The function than changes the directory.
     """
     os.chdir(owd)  # Goes back to the directory where the script is
-    #dir_path = os.path.dirname(os.path.realpath(__file__))  # Ta
     dir_path = owd
     dir_path = dir_path + '/' + str(folder_name) + str(dict['file_name'])
 
@@ -142,7 +141,7 @@ def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip, load_st
     else:
         print 'Loading '+str(load_str)+':'
         index = 0
-        for i in range(0, len(nr_files), 2):  # Takes every second element in list
+        for i in tqdm(range(0, len(nr_files), 2)):  # Takes every second element in list
             frame = file_name + str.zfill(str(nr_files[i]), 5) + str(file_type)
             names.append(frame)
             frame_data = np.loadtxt(frame, skiprows = line_skip)
@@ -253,6 +252,7 @@ if os.path.isfile('Batch_PDF_config.ini'):
     parser.read('Batch_PDF_config.ini')
     load_dict  = parser.getboolean('Dictionary', 'load_dict')
     imp_dict   = parser.get('Dictionary', 'imp_dict')
+
 else:
     load_dict  = False
     timeResCon = False
@@ -304,6 +304,7 @@ if load_dict:
     print '{0:12s} {1} {2}'.format('calib_bg', '= ', dict['calib_bg'])
     print '{0:12s} {1} {2}'.format('auto', '= ', dict['auto'])
     print '{0:12s} {1} {2}'.format('sumstep', '= ', dict['sumstep'])
+    print '{0:12s} {1} {2}'.format('sumstep_bg', '= ', dict['sumstep_bg'])
     print '{0:12s} {1} {2}'.format('bg_scaling', '= ', dict['bg_scaling'])
     print '{0:12s} {1} {2}'.format('qnorm', '= ', dict['qnorm'])
 
@@ -374,6 +375,7 @@ elif timeResCon:
     dict['calib_bg']    = parser.getboolean('Scaling', 'calib_bg')  
     dict['auto']        = parser.getboolean('Scaling', 'auto') 
     dict['sumstep']     = parser.getint('Scaling', 'sumstep')
+    dict['sumstep_bg']     = parser.getint('Scaling', 'sumstep_bg')
     dict['bg_scaling']  = parser.getfloat('Scaling', 'bg_scaling')
     dict['qnorm']       = parser.get('Scaling', 'qnorm')
 
@@ -439,6 +441,7 @@ else:
     dict['calib_bg']    = True                                                                                  #If false, autoscale at qnorm   
     dict['auto']        = True
     dict['sumstep']     = 1                                                                                     #Summing files to increase intensity. If = 1, then no summation will be done                                                                                    
+    dict['sumstep_bg']  = 1
     dict['bg_scaling']  = 0.98                                                                                  #Constant scaling of bagground
     dict['qnorm']       = 22                                                                                    #Define the point in q, where the background should line up with the data
 
@@ -500,7 +503,50 @@ if dict['seq_bg'] and dict['make_cfg'] == False:
             error = 1
         j = i
 
+if dict['seq_bg'] and (dict['sumstep'] > 1 or dict['sumstep_bg'] > 1):
+    print 'seq_bg can not be set to True if either sumstep or sumstep_bg is above 1!'
+    error = 1
+
+if dict['nr_bg_files'] > dict['nr_files'] and dict['sumstep_bg'] > 1:  # Checking that the user do not have more bg files than data files
+    print 'You can not have more background files than'
+    error = 1
+
+if dict['sumstep'] > dict['nr_files'] or dict['sumstep_bg'] > dict['nr_bg_files']:  # Checking that the user dont sum more files than given
+    print 'You can not sum more files then you have!'
+    print '\t Data: summing ', dict['sumstep'], ' files, you gave ', dict['nr_files']
+    print '\t Background: summing ', dict['sumstep_bg'], ' files, you gave ', dict['nr_bg_files'], '\n' 
+    error = 1
+
+if dict['nr_files'] % dict['sumstep'] != 0 and dict['nr_bg_files'] % dict['sumstep_bg'] != 0:  # Checking dimensions of data and background after summation 
+    if (dict['nr_files'] / dict['sumstep'])+1 < (dict['nr_bg_files'] / dict['sumstep_bg'])+1:
+        print 'After summation you have more background files than data files!'
+        print '\t', 'Data < Background'
+        print '\t',(dict['nr_files'] / dict['sumstep'])+1,' < ',(dict['nr_bg_files'] / dict['sumstep_bg'])+1,'\n'  
+        error = 1
+
+elif dict['nr_files'] % dict['sumstep'] == 0 and dict['nr_bg_files'] % dict['sumstep_bg'] != 0:
+    if (dict['nr_files'] / dict['sumstep']) < (dict['nr_bg_files'] / dict['sumstep_bg'])+1:
+        print 'After summation you have more background files than data files!'
+        print '\t', 'Data < Background'
+        print '\t',(dict['nr_files'] / dict['sumstep']),' < ',(dict['nr_bg_files'] / dict['sumstep_bg'])+1,'\n'  
+        error = 1
+
+elif dict['nr_files'] % dict['sumstep'] != 0 and dict['nr_bg_files'] % dict['sumstep_bg'] == 0:
+    if (dict['nr_files'] / dict['sumstep'])+1 < (dict['nr_bg_files'] / dict['sumstep_bg']):
+        print 'After summation you have more background files than data files!'
+        print '\t', 'Data < Background'       
+        print '\t',(dict['nr_files'] / dict['sumstep'])+1,' < ',(dict['nr_bg_files'] / dict['sumstep_bg']),'\n'  
+        error = 1
+
+else:
+     if (dict['nr_files'] / dict['sumstep']) < (dict['nr_bg_files'] / dict['sumstep_bg']):
+        print 'After summation you have more background files than data files!'
+        print '\t', 'Data < Background'       
+        print '\t',(dict['nr_files'] / dict['sumstep']),' < ',(dict['nr_bg_files'] / dict['sumstep_bg']),'\n'  
+        error = 1
+    
 if error == 1:
+    print 'THE PROGRAM HAS BEEN TERMINATED!!!'
     sys.exit()
 
 #---------------------------------------------------------------------------------------------------
@@ -537,6 +583,7 @@ if dict['load_data'] == False and dict['make_cfg'] == False:
     same_len = 0
     steps = len(xdata_set)
     dict['save_data'] = False
+
 elif dict['make_cfg'] == False:
     print '\nInitilazing import of files!'
    
@@ -676,65 +723,46 @@ elif dict['make_cfg'] == False:
         ybg_set = ybg_set_int  
 
     if len(dict['bg_info'])/2 < dict['nr_files'] and dict['seq_bg'] == True:  # Makes a new matrix with backgrounds
-        test_bg   = []
+        ph_bg   = []
         extend    = dict['bg_info'][3::2]  # Starts at third index and then takes every second
         bg_index  = 0
         start_val = 0
         for i in extend:
             for j in range((i-start_val)-1):
-                test_bg.append(ybg_set[bg_index])
+                ph_bg.append(ybg_set[bg_index])
             bg_index += 1
             start_val = i-1
             if i == extend[-1]:
                 for i in range((dict['nr_files']-extend[-1])+1):
-                    test_bg.append(ybg_set[-1])    
+                    ph_bg.append(ybg_set[-1])    
                 
-        ybg_set = np.array(test_bg)
-
-    if dict['sumstep'] > 1 and dict['seq_bg'] == False:
-        print 'Data and background is beeing summed!!!'
+        ybg_set = np.array(ph_bg)
+   
+    if dict['sumstep'] > 1 and dict['seq_bg'] == False:  # Summing sumstep of data files together
+        print 'Data files are beeing summed!!'
         ydata_set = sum_data(dict['nr_files'], dict['sumstep'], ydata_set)
-        ybg_set = sum_data(dict['nr_bg_files'], dict['sumstep'], ybg_set)
-        print dict['nr_files'], dict['sumstep'], float( dict['nr_files']) / dict['sumstep'],int(float( dict['nr_files']) / dict['sumstep'])
-        print  float( dict['nr_files']) / dict['sumstep']- int(float( dict['nr_files']) / dict['sumstep'])
- 
-        dict['nr_files'] = (dict['nr_files']/dict['sumstep'])+1
-        print dict['nr_files']
-        dict['nr_bg_files'] = (dict['nr_bg_files']/dict['sumstep'])+1
+        dict['nr_files'] = len(ydata_set)
 
-    print (dict['nr_files'] % dict['sumstep']), ' MODULUS!!! '
-
-    if dict['sumstep'] > 1:
-        if float(dict['nr_files']) / dict['sumstep'] - int(float(dict['nr_files'])/dict['sumstep']) < 0.5:
-            print 'PLUS ONE'
-            dict['nr_files'] = (dict['nr_files'])
-            dict['nr_bg_files'] = dict['nr_bg_files']
-        else:
-            dict['nr_files'] = (dict['nr_files'])-1
-            dict['nr_bg_files'] = dict['nr_bg_files']-1
-    else:
-        dict['nr_files'] = (dict['nr_files']) 
-
+    if dict['sumstep_bg'] > 1 and dict['seq_bg'] == False:  # Summing sumstep of background files together
+        print 'Background files are beeing summed!!'
+        ybg_set = sum_data(dict['nr_bg_files'], dict['sumstep_bg'], ybg_set)   
+        dict['nr_bg_files'] = len(ybg_set)
 
     if same_len == 1 and dict['seq_bg'] == False:
-        ybg_set = np.reshape(ybg_set, (dict['nr_bg_files'], steps))
+        ybg_set = np.reshape(ybg_set, (len(ybg_set), steps))
 
     if dict['nr_files'] > dict['nr_bg_files'] and dict['seq_bg'] == False:  # If there are less background files the data files exstend bg matrix with last background row til they match
         add_bgy = ybg_set[-1]
         add_bgy = np.reshape(add_bgy, (1, steps))
 
-        print '\n', 'Extending background matrix:'
-        if float(dict['nr_files']) / dict['sumstep'] - int(float(dict['nr_files'])/dict['sumstep']) < 0.5:
-            for i in tqdm(range(abs(dict['nr_files'] - dict['nr_bg_files']))):
-               ybg_set = np.concatenate((ybg_set, add_bgy), axis = 0)
-        else:
-            for i in tqdm(range(abs(dict['nr_files'] - dict['nr_bg_files'])+1)):
-               ybg_set = np.concatenate((ybg_set, add_bgy), axis = 0)
-
+        print '\n', 'Extending background matrix:' 
+        for i in tqdm(range(dict['nr_files'] - dict['nr_bg_files'])):
+           ybg_set = np.concatenate((ybg_set, add_bgy), axis = 0)
+    
 if dict['save_data'] and dict['make_cfg'] == False:
     print '\nSaving data!'
-    print '\tSaved data is not background subtrackted.\n'
-    print '\tSaved data does not contain headers!'
+    print '\tSaved data is not background subtrackted.'
+    print '\tSaved data does not contain headers!\n'
    
     pic_dir(dict['cfg_dir'], 'data_binary_')
    
@@ -778,7 +806,7 @@ if dict['make_cfg'] and load_dict == False:
     FLOATS = np.array(['',dataformat, outputtypes, composition, qmaxinst, qmin, qmax, rmin, rmax, rstep, rpoly])
     DAT =  np.column_stack((NAMES, FLOATS))
     np.savetxt(cfg_name, DAT, delimiter=" = ", fmt="%s") 
-    print 'A cfg file has been created, ' + str(dict['cfg_file'])
+    print str(dict['cfg_file'])
     sys.exit()
 
 elif dict['PDF']:
@@ -796,6 +824,7 @@ elif dict['PDF']:
     else:
         th_q_low  = cfg.qmin
         th_q_high = cgf.qmax
+
 else:
     print 'Lowest q (in AA) value that will be tested for negative values:'
     while True:
@@ -819,8 +848,7 @@ else:
 #
 #---------------------------------------------------------------------------------------------------
 
-if dict['calib_bg']:
-    print '\nCalib_bg is set to True!'
+if dict['calib_bg']: 
     '''
     If calib_bg = True, then all frames / measurements will be scaled with the same constant. 
     For determining the scalingsfactor for background subtration two methods can be done. It 
@@ -865,7 +893,7 @@ if dict['calib_bg']:
         scaled_bg = scaled_bg.T
         y_diff = ydata_set[:] - scaled_bg
         y_diff = np.array(y_diff)    
-
+        
         for i in range(dict['nr_files']):
             for j in range(len(y_diff[i])):
                 if y_diff[i][j] <= 0 and th_q_low < xdata_set[j] and th_q_high > xdata_set[j] :
@@ -873,47 +901,6 @@ if dict['calib_bg']:
 
         lets_plot(xdata_set, ydata_set[0], xbg_set, scaled_bg[0], xdata_set, y_diff[0], xdata_set, ydata_set[-1], xbg_set, scaled_bg[-1], xdata_set, y_diff[-1], dict['save_pics'], dict['cfg_dir'])
 
-     
-###################
-#    
-#    if dict['auto']:  # Subtracts all points with a constant scaling so that no values are negative within the specified range
-#        #y_diff = ydata_set[:] - 0#ybg_set[:]
-#        #y_diff = np.array(y_diff)
-#        
-#        print np.amin(y_diff), 'heeeeeeeeeeeeeeej'
-#
-#        strc = np.zeros(len(y_diff), dtype=[('Neg Values', float), ('List', int), ('Index', int)])
-#
-#        for k in range(len(y_diff)):
-#            lowest_neg = 0
-#            #print 'k\n', k
-#            #print y_diff[k]
-#            
-#            neg_vals = [j for j, i in enumerate(y_diff[k]) if i < 0]  # Find all negative values
-#            #zero_vals = [j for j, i in enumerate(y_diff[k]) if i = 0]  # Find all negative values
-#            #positive_vals = [j for j, i in enumerate(y_diff[k]) if i > 0]  # Find all negative values
-#            
-#            #print 'neg_vals\n', neg_vals
-#            #for i in neg_vals:
-#                #print xdata_set[i]
-#                #continue
-#            try: 
-#                lowest_neg = np.amin([y_diff[k][i] for i in neg_vals if xdata_set[i] > th_q_low and xdata_set[i] < th_q_high])  # Find the largest negative values
-#                #print 'lowest_ne\n', lowest_neg
-#            except ValueError:
-#                continue
-#                #print 'No negative values between '+str(th_q_low)+ ' and ' + str(th_q_high) + ' AA.'
-#            if lowest_neg > 0:
-#                tallet = [i for i in neg_vals if y_diff[k][i] == lowest_neg]  # Returns index for largest negative value
-#                print y_diff[k][tallet], xdata_set[tallet]
-#                #print 'tallet\n', tallet
-#                print 'Negative values between '+str(th_q_low)+ ' and ' + str(th_q_high) + ' AA at {:6.1f}'.format(k * totime) + ' m.'
-#
-#                v1 = fields_view(strc, ['Neg Values', 'List', 'Index'])
-#                v1[k] = lowest_neg, k, tallet[0] 
-#
-#        strc.sort(order='Neg Values'#
- 
     else:  # Takes a constant scaling factor and subtracts bg from data. The data is then checked for negative values     
         scale = dict['bg_scaling']
         scaled_bg = (ybg_set[:] * scale)
@@ -953,7 +940,7 @@ else:
             while scan_ph == 1:
                 if th_q_low < xdata_set[diff_index[i]] and th_q_high > xdata_set[diff_index[i]] and li1[diff_index[i]] != 0:
                     scale = (li1[diff_index[i]] / li2[diff_index[i]]+0.00001) * 0.99  # Scales the background a bit further down
-                    #print (li1[diff_index[i]]) ,' / ', (li2[diff_index[i]]+0.00001) 
+                     
                     scan_ph = 0
                 
                 i += 1
@@ -978,7 +965,6 @@ else:
         #np.savetxt('Scaling'+str(dict['nr_files'])+'.txt', scale_list)            
      
         lets_plot(xdata_set, ydata_set[0], xbg_set, scaled_bg[0], xdata_set, y_diff[0], xdata_set, ydata_set[-1], xbg_set, scaled_bg[-1], xdata_set, y_diff[-1], dict['save_pics'], dict['cfg_dir'])
-
 
     else:
         scale_list = np.zeros(dict['nr_files'])
