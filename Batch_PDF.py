@@ -24,7 +24,7 @@ import h5py
 import heapq
 import sys
 import ast
-import itertools
+#import itertools
 
 from prompter import yesno
 from tqdm import tqdm
@@ -218,10 +218,7 @@ def interpol(xmin, xmax, steps, xdata, ydata):
     return xnew, ynew
 
 def sum_data(nr_sum, sumstep, data):
-    
     summing = nr_sum/sumstep
-        
-    maaske = nr_sum - (summing * sumstep)
     placeholder = sumstep
     sum_mat = []
     constant = sumstep - (nr_sum - (sumstep * summing))
@@ -231,8 +228,8 @@ def sum_data(nr_sum, sumstep, data):
         
         if placeholder == summing * sumstep and constant != sumstep:
             print 'WARNING!!! Could not sum frames in pairs of ' + str(sumstep) + '. To correct for this, the intensity of last data set is multiplied by ' + str(constant+1) + ' in the last frame.' 
-            last_mat = data[placeholder::, 0::]
-            exstend_mat = data[-1::, 0::]
+            last_mat = data[placeholder::][0::]
+            exstend_mat = data[-1::][0::]
 
             for i in range(constant):
                 last_mat = np.concatenate((last_mat, exstend_mat), axis = 0)
@@ -695,10 +692,29 @@ elif dict['make_cfg'] == False:
         ybg_set = np.array(test_bg)
 
     if dict['sumstep'] > 1 and dict['seq_bg'] == False:
+        print 'Data and background is beeing summed!!!'
         ydata_set = sum_data(dict['nr_files'], dict['sumstep'], ydata_set)
         ybg_set = sum_data(dict['nr_bg_files'], dict['sumstep'], ybg_set)
+        print dict['nr_files'], dict['sumstep'], float( dict['nr_files']) / dict['sumstep'],int(float( dict['nr_files']) / dict['sumstep'])
+        print  float( dict['nr_files']) / dict['sumstep']- int(float( dict['nr_files']) / dict['sumstep'])
+ 
         dict['nr_files'] = (dict['nr_files']/dict['sumstep'])+1
+        print dict['nr_files']
         dict['nr_bg_files'] = (dict['nr_bg_files']/dict['sumstep'])+1
+
+    print (dict['nr_files'] % dict['sumstep']), ' MODULUS!!! '
+
+    if dict['sumstep'] > 1:
+        if float(dict['nr_files']) / dict['sumstep'] - int(float(dict['nr_files'])/dict['sumstep']) < 0.5:
+            print 'PLUS ONE'
+            dict['nr_files'] = (dict['nr_files'])
+            dict['nr_bg_files'] = dict['nr_bg_files']
+        else:
+            dict['nr_files'] = (dict['nr_files'])-1
+            dict['nr_bg_files'] = dict['nr_bg_files']-1
+    else:
+        dict['nr_files'] = (dict['nr_files']) 
+
 
     if same_len == 1 and dict['seq_bg'] == False:
         ybg_set = np.reshape(ybg_set, (dict['nr_bg_files'], steps))
@@ -708,9 +724,13 @@ elif dict['make_cfg'] == False:
         add_bgy = np.reshape(add_bgy, (1, steps))
 
         print '\n', 'Extending background matrix:'
-        for i in tqdm(range(abs(dict['nr_files'] - dict['nr_bg_files']))):
-            ybg_set = np.concatenate((ybg_set, add_bgy), axis = 0)
-     
+        if float(dict['nr_files']) / dict['sumstep'] - int(float(dict['nr_files'])/dict['sumstep']) < 0.5:
+            for i in tqdm(range(abs(dict['nr_files'] - dict['nr_bg_files']))):
+               ybg_set = np.concatenate((ybg_set, add_bgy), axis = 0)
+        else:
+            for i in tqdm(range(abs(dict['nr_files'] - dict['nr_bg_files'])+1)):
+               ybg_set = np.concatenate((ybg_set, add_bgy), axis = 0)
+
 if dict['save_data'] and dict['make_cfg'] == False:
     print '\nSaving data!'
     print '\tSaved data is not background subtrackted.\n'
@@ -767,10 +787,15 @@ elif dict['PDF']:
     os.chdir(dict['cfg_dir'])
     print 'Directory has been changed:'
     print os.getcwd()
-
+    
     cfg = loadPDFConfig(dict['cfg_file'])
-    th_q_low  = cfg.qmin * 10
-    th_q_high = cfg.qmax * 10
+    
+    if cfg.dataformat == 'Qnm':
+        th_q_low  = cfg.qmin * 10
+        th_q_high = cfg.qmax * 10
+    else:
+        th_q_low  = cfg.qmin
+        th_q_high = cgf.qmax
 else:
     print 'Lowest q (in AA) value that will be tested for negative values:'
     while True:
@@ -1080,7 +1105,6 @@ if dict['PDF']:
 
     r = np.array(r)
     gr = np.array(gr)   
-
     if dict['gen_PDF_file']:
         print "\nGenerating G(r) files!"
         pic_dir(dict['cfg_dir'], 'Gr_')
