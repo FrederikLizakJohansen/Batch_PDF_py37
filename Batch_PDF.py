@@ -79,8 +79,8 @@ def neg_check(mat, start, owd, gen_pic, totime):
     ax.tick_params(axis='y', labelsize = 16)
 
     if gen_pic:
-        pic_dir(owd, 'Pictures_')
-        fig.savefig('Negative_Values' + '.png')
+        pic_dir(owd, 'Figures')
+        fig.savefig('Negative_Values_'+str(prettyName)+ '.png')
         plt.clf()
 
     else:
@@ -101,9 +101,11 @@ def pic_dir(owd, folder_name):
     The function than changes the directory.
     """
     os.chdir(owd)  # Goes back to the directory where the script is
-    dir_path = owd
-    dir_path = dir_path + '/' + str(folder_name) + str(dict['file_name'])
+    if str(folder_name).endswith('-') and nameAdd != -1:
+        name = str(folder_name[:-1])
 
+    dir_path = owd + '/' + str(folder_name)
+    
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
 
@@ -226,8 +228,8 @@ def lets_plot(x_data, y_data, x_bg, y_bg, x_diff, y_diff, x_data1, y_data1, x_bg
     plt.tight_layout(pad=2, w_pad=1.0, h_pad=1.0)
 
     if gen_pic:
-        pic_dir(owd, 'Pictures_')
-        fig2.savefig('Background' + '.png')
+        pic_dir(dict['cfg_dir'], 'Figures')
+        fig2.savefig('Background_'+str(prettyName) + '.png')
         plt.clf()
     else:
         plt.draw()
@@ -289,6 +291,9 @@ def dir_check(folderDir, folderName='', fileName='', folder=True):
 #
 #---------------------------------------------------------------------------------------------------
 
+owd = os.getcwd()
+dictLoaded = False
+
 if os.path.isfile('Batch_PDF_config.ini'):
     timeResCon = True
     parser     = ConfigParser.ConfigParser()
@@ -314,7 +319,28 @@ else:
 #--------------------------------------------------------------------------------------------------- 
 
 if load_dict:
-    dict = pickle.load(open(imp_dict, "rb"))
+    true0      = True
+    true1      = True
+    dictLoaded = True
+    print 'Current directory:'
+    print '\t',os.getcwd(), '\n'
+    while true0:
+        while true1:
+            user_input = raw_input("Enter the path to dictionary: ")
+            try:
+                os.chdir(str(user_input))
+                true1 = False
+            except:
+                print user_input
+                print 'Directory not found!'
+            print '\t'
+        try:
+            dict = pickle.load(open(imp_dict, "rb"))
+            true0 = False
+        except:
+            print str(imp_dict)+'not found\n'
+            true1 = True
+
     print '\n' + 'Printing values for imported Dictionary: ' + '\n'
 
     print '[Main]'
@@ -367,7 +393,6 @@ if load_dict:
     print '{0:12s} {1} {2}'.format('save_pics', '= ', dict['save_pics'])
     print '{0:12s} {1} {2}'.format('pdf_file', '= ', dict['pdf_file'])
     print '{0:12s} {1} {2}'.format('timeframe', '= ', dict['timeframe'])
-    print '{0:12s} {1} {2}'.format('PDF_name', '= ', dict['PDF_name'])
 
     print '\n[3D_Plot]'
     print '{0:12s} {1} {2}'.format('3D_plot', '= ', dict['3D_plot'])
@@ -441,7 +466,6 @@ elif timeResCon:
     dict['save_pics']   = parser.getboolean('Plotting', 'save_pics')
     dict['pdf_file']    = parser.getint('Plotting', 'pdf_file') 
     dict['timeframe']   = parser.getfloat('Plotting', 'timeframe')
-    dict['PDF_name']    = parser.get('Plotting', 'PDF_name')
 
     # [3D Plot]
     dict['3D_plot']     = parser.getboolean('3D_Plot', '3D_plot')
@@ -509,7 +533,6 @@ else:
     dict['save_pics']   = True
     dict['pdf_file']    = -1                                                                                    #Show the pdf of a specific file        
     dict['timeframe']   = 2                                                                                     # Time for every measurement in seconds
-    dict['PDF_name']    = 'WCl6_160_p'
 
     # [3D_Plot]
     dict['3D_plot']     = True
@@ -608,41 +631,44 @@ if error == 1:
 
 exists = np.zeros(7)
 
+if str(dict['file_name']).endswith('-'):
+    prettyName = str(dict['file_name'][:-1])
+
 if dict['save_data'] and dict['make_cfg'] == False:
-    exists[0] = dir_check(dict['cfg_dir'], folderName='data_binary_'+str(dict['file_name']))
+    exists[0] = dir_check(dict['cfg_dir'], folderName='DataBinary')
    
 if dict['gen_PDF_file'] and dict['make_cfg'] == False:
-    exists[1] = dir_check(dict['cfg_dir'], folderName='Gr_'+str(dict['file_name']))
+    exists[1] = dir_check(dict['cfg_dir'], folderName='Gr_'+str(prettyName))
 
 if dict['gen_fq_file'] and dict['make_cfg'] == False:
-    exists[2] = dir_check(dict['cfg_dir'], folderName='Fq_'+str(dict['file_name']))
+    exists[2] = dir_check(dict['cfg_dir'], folderName='Fq_'+str(prettyName))
 
 if dict['gen_iq_file'] and dict['make_cfg'] == False:
-    exists[3] = dir_check(dict['cfg_dir'], folderName='Iq_'+str(dict['file_name']))
+    exists[3] = dir_check(dict['cfg_dir'], folderName='Iq_'+str(prettyName))
 
 if dict['make_cfg']:
     exists[4] = dir_check(dict['cfg_dir'], fileName=dict['cfg_file'], folder=False)
 
 if dict['save_pics'] and dict['make_cfg'] == False:
-    exists[5] = dir_check(dict['cfg_dir'], folderName='Pictures_'+str(dict['file_name']))
+    exists[5] = dir_check(dict['cfg_dir'], folderName='Figures')
 
 if save_dict and dict['make_cfg'] == False:
-    exists[6] = dir_check(dict['cfg_dir'], folderName='Pictures_'+str(dict['file_name']), fileName=dict_name+'.py', folder=False)
+    exists[6] = dir_check(dict['cfg_dir'], folderName='Figures', fileName=dict_name+'.py', folder=False)
 
 if np.sum(exists) > 0:
     print 'Already existing:'
     if exists[0] == 1:
-        print '\tdata_binary_'+str(dict['file_name'])
+        print '\tDataBinary'
     if exists[1] == 1:
-        print '\tGr_'+str(dict['file_name'])
+        print '\tGr_'+str(prettyName)
     if exists[2] == 1:
-        print '\tFq_'+str(dict['file_name'])
+        print '\tFq_'+str(prettyName)
     if exists[3] == 1:
-        print '\tIq_'+str(dict['file_name'])
+        print '\tIq_'+str(prettyName)
     if exists[4] == 1:
         print '\t'+dict['cfg_file']
     if exists[5] == 1:
-        print '\tPicture_'+str(dict['file_name'])
+        print '\tFigures'
     if exists[6] == 1:
         print '\t'+str(dict_name)
     print '\nIt is possible that you are going to overwrite data!'
@@ -655,7 +681,6 @@ if np.sum(exists) > 0:
 #
 #--------------------------------------------------------------------------------------------------- 
 
-owd = os.getcwd()
 totime = dict['timeframe']/60
 
 #---------------------------------------------------------------------------------------------------
@@ -701,14 +726,17 @@ elif dict['PDF']:
     print os.getcwd()
     
     cfg = loadPDFConfig(dict['cfg_file'])
-    
-    if cfg.dataformat == 'Qnm':
+
+    if cfg.dataformat == 'Qnm' and load_dict == False:
         th_q_low  = cfg.qmin * 10
         th_q_high = cfg.qmax * 10
         if dict['norm'] == 0:
             dict['norm'] = cfg.qmax*10
         else:
-            dict['norm'] = dict['norm'] * 10
+            dict['norm'] = dict['norm']*10
+    elif cfg.dataformat == 'Qnm' and load_dict:
+        th_q_low  = cfg.qmin * 10
+        th_q_high = cfg.qmax * 10
     else:
         th_q_low  = cfg.qmin
         th_q_high = cfg.qmax
@@ -740,9 +768,9 @@ else:
 
 if dict['load_data'] == False and dict['make_cfg'] == False:
     print '\nLoading HDF5 files:'
-    pic_dir(dict['cfg_dir'], 'data_binary_')
+    pic_dir(dict['cfg_dir'], 'DataBinary')
     
-    hdf5_file = h5py.File('raw_data.hdf5', 'r')
+    hdf5_file = h5py.File(str(prettyName)+'.hdf5', 'r')
 
     xdata_set   = hdf5_file['xdata'].value
     ydata_set   = hdf5_file['ydata'].value
@@ -992,9 +1020,9 @@ if dict['save_data'] and dict['make_cfg'] == False:
     print '\tSaved data is not background subtrackted.'
     print '\tSaved data does not contain headers!\n'
    
-    pic_dir(dict['cfg_dir'], 'data_binary_')
+    pic_dir(dict['cfg_dir'], 'DataBinary')
    
-    hdf5_data = h5py.File('raw_data.hdf5', 'w') 
+    hdf5_data = h5py.File(str(prettyName)+'.hdf5', 'w') 
 
     hdf5_data.create_dataset('xdata', data=xdata_set)
     hdf5_data.create_dataset('ydata', data=ydata_set)   
@@ -1116,12 +1144,13 @@ else:
         y_diff = np.array(y_diff)
         np.set_printoptions(threshold=np.nan)
         for i in range(dict['nr_files']):
-            print i,') ', scale_list[i]
+            print '{:4d}) {:8.5f}'.format(i, scale_list[i])
 
         for i in range(dict['nr_files']):
             for j in range(len(y_diff[i])):
                 if y_diff[i][j] <= 0 and th_q_low < xdata_set[j] and th_q_high > xdata_set[j] :
-                    print 'Frame:', i,' X-val :',xdata_set[j], ' neg val: ', y_diff[i][j]
+                    print 'Frame {:4d}; x-value: {:8.1f}; neg-value: {:12.2f}'.format(i, xdata_set[j], y_diff[i][j])
+                    #print 'Frame:', i,' X-val :',xdata_set[j], ' neg val: ', y_diff[i][j]
         #np.savetxt('Scaling'+str(dict['nr_files'])+'.txt', scale_list)            
      
         lets_plot(xdata_set, ydata_set[0], xbg_set, scaled_bg[0], xdata_set, y_diff[0], xdata_set, ydata_set[-1], xbg_set, scaled_bg[-1], xdata_set, y_diff[-1], dict['save_pics'], dict['cfg_dir'])
@@ -1174,8 +1203,8 @@ else:
         ax.set_xlim(dict['first_file']*totime, (dict['first_file'] + dict['nr_files'])*totime)
 
         if dict['save_pics']:
-            pic_dir(dict['cfg_dir'], 'Pictures_')
-            fig2.savefig('Scale_factor' + '.png')
+            pic_dir(dict['cfg_dir'], 'Figures')
+            fig2.savefig('Scale_factor_'+str(prettyName) + '.png')
             plt.clf()
         else:
             plt.draw()
@@ -1253,7 +1282,7 @@ if dict['PDF']:
     gr = np.array(gr)   
     if dict['gen_PDF_file'] and dict['load_data'] == True:
         print "\nGenerating G(r) files!"
-        pic_dir(dict['cfg_dir'], 'Gr_')
+        pic_dir(dict['cfg_dir'], 'Gr_'+str(prettyName))
         head_name  = np.array(['# Composition', '# qmaxinst', '# qmin', '# qmax', '# rmin', '# rmax', '# Nyquist', '# rstep', '# rpoly', '# Data', '# Background','# Scaling', '#'])
         index = 0
         k     = 0
@@ -1295,7 +1324,7 @@ if dict['PDF']:
 
     if dict['gen_fq_file'] and dict['load_data'] == True:
         print "\nGenerating F(q) files!"
-        pic_dir(dict['cfg_dir'], 'Fq_')
+        pic_dir(dict['cfg_dir'], 'Fq_'+str(prettyName))
         index = 0
         k     = 0
         for i in tqdm(range(dict['nr_files'])):
@@ -1336,7 +1365,7 @@ if dict['PDF']:
 
     if dict['gen_iq_file'] and dict['load_data'] == True:
         print "\nGenerating I(q) files!"
-        pic_dir(dict['cfg_dir'], 'Iq_')
+        pic_dir(dict['cfg_dir'], 'Iq_'+str(prettyName))
         index = 0
         k     = 0
         for i in tqdm(range(dict['nr_files'])):
@@ -1376,7 +1405,7 @@ if dict['PDF']:
 
     if dict['gen_PDF_file'] and dict['load_data'] == False:
         print "\nGenerating G(r) files!"
-        pic_dir(dict['cfg_dir'], 'Gr_')
+        pic_dir(dict['cfg_dir'], 'Gr_'+str(prettyName))
         for i in tqdm(range(dict['nr_files'])):
             saving_dat = np.column_stack((r[i],gr[i])) 
             np.savetxt(dict['file_name'] + str(i).zfill(3) +'.gr', saving_dat, fmt='%s')
@@ -1384,7 +1413,7 @@ if dict['PDF']:
 
     if dict['gen_fq_file'] and dict['load_data'] == False:
         print "\nGenerating F(q) files!"
-        pic_dir(dict['cfg_dir'], 'Fq_')
+        pic_dir(dict['cfg_dir'], 'Fq_'+str(prettyName))
         for i in tqdm(range(dict['nr_files'])):
             saving_dat = np.column_stack((q_fq[i],fq[i])) 
             np.savetxt(dict['file_name'] + str(i).zfill(3) +'.fq', saving_dat, fmt='%s')
@@ -1392,7 +1421,7 @@ if dict['PDF']:
 
     if dict['gen_iq_file'] and dict['load_data'] == False:
         print "\nGenerating I(q) files!"
-        pic_dir(dict['cfg_dir'], 'Iq_')
+        pic_dir(dict['cfg_dir'], 'Iq_'+str(prettyName))
         for i in tqdm(range(dict['nr_files'])):
             saving_dat = np.column_stack((q_iq[i],iq[i])) 
             np.savetxt(dict['file_name'] + str(i).zfill(3) +'.iq', saving_dat, fmt='%s')
@@ -1430,8 +1459,8 @@ if dict['PDF']:
     fig.subplots_adjust(hspace=0.65)
 
     if dict['save_pics']:
-        pic_dir(dict['cfg_dir'], 'Pictures_')
-        fig.savefig(dict['PDF_name'] + '.png')
+        pic_dir(dict['cfg_dir'], 'Figures')
+        fig.savefig('InSitu_'+str(prettyName) + '.png')
         plt.clf()
     else:
         plt.draw()
@@ -1452,8 +1481,8 @@ if dict['PDF']:
         ax1.legend(loc='best', fontsize = 13)
 
         if dict['save_pics']:
-            pic_dir(dict['cfg_dir'], 'Pictures_')
-            fig1.savefig('Single_PDF' + '.png')
+            pic_dir(dict['cfg_dir'], 'Figures')
+            fig1.savefig('Single_PDF'+str(prettyName) + '.png')
             plt.clf()
         else:
             plt.draw()
@@ -1504,8 +1533,8 @@ if dict['PDF']:
         plt.tight_layout(pad=2, w_pad=1.0, h_pad=1.0)       
         
         if dict['save_pics']:
-            pic_dir(dict['cfg_dir'], 'Pictures_')
-            fig2.savefig('All' + '.png')
+            pic_dir(dict['cfg_dir'], 'Figures')
+            fig2.savefig('All_'+str(prettyName) + '.png')
             plt.clf()
         else:
             plt.draw()
@@ -1549,8 +1578,8 @@ if dict['PDF']:
         fig.tight_layout()
 
         if dict['save_pics']:
-            pic_dir(dict['cfg_dir'], 'Pictures_')
-            fig.savefig('3d' + '.png')
+            pic_dir(dict['cfg_dir'], 'Figures')
+            fig.savefig('3d_'+str(prettyName) + '.png')
             plt.clf()
         else:
             plt.draw()
@@ -1565,5 +1594,5 @@ if dict['PDF']:
 #---------------------------------------------------------------------------------------------------
 
 if save_dict:
-    pic_dir(dict['cfg_dir'], 'Pictures_')
+    pic_dir(dict['cfg_dir'], 'Figures')
     pickle.dump(dict, open(dict_name + ".py", "wb" ))
