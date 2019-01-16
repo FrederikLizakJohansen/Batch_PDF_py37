@@ -111,7 +111,7 @@ def pic_dir(owd, folder_name):
     print 'Directory has been changed:'
     print os.getcwd()   
 
-def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip, load_str, seq=True):
+def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip, load_str, seq=True, normData=-1):
     """
 
     """
@@ -122,22 +122,35 @@ def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip, load_st
     names    = []
     dim      = 1
     lendat1  = 0
-    
     if seq == True:
         print 'Loading '+str(load_str)+':'
         for i in tqdm(range(frame_sumstart, frame_sumstart + nr_files)):
             frame = file_name + str.zfill(str(i), 5) + str(file_type)
             names.append(frame)
             frame_data = np.loadtxt(frame, skiprows = line_skip)
-            x_values.append(frame_data[:,0])
-            y_values.append(frame_data[:,1])
-            min_val.append(frame_data[0,0])
-            max_val.append(frame_data[-1,0])
-            
+            if normData != -1:
+                closeVal = min(frame_data[:,0], key=lambda x:abs(x-normData))  # Finds closest element to x
+                where = np.where(frame_data[:,0] == closeVal)  # Finds index
+                fluct = frame_data[where, 1]
+                fluct = fluct[0][0]
+                x_values.append(frame_data[:,0])
+                y_frame = frame_data[:,1] / fluct
+                y_values.append(y_frame)
+                min_val.append(frame_data[0,0])
+                max_val.append(frame_data[-1,0])
+
+            else:
+                closeVal = min(frame_data[:,0], key=lambda x:abs(x-seq))
+                x_values.append(frame_data[:,0])
+                y_values.append(frame_data[:,1])
+                min_val.append(frame_data[0,0])
+                max_val.append(frame_data[-1,0])
+
             lendat2 = len(y_values[i - frame_sumstart])
             
             if lendat2 > lendat1:
                 lendat1 = lendat2
+
     else:
         print 'Loading '+str(load_str)+':'
         index = 0
@@ -145,10 +158,23 @@ def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip, load_st
             frame = file_name + str.zfill(str(nr_files[i]), 5) + str(file_type)
             names.append(frame)
             frame_data = np.loadtxt(frame, skiprows = line_skip)
-            x_values.append(frame_data[:,0])
-            y_values.append(frame_data[:,1])
-            min_val.append(frame_data[0,0])
-            max_val.append(frame_data[-1,0])
+            if normData != -1:
+                closeVal = min(frame_data[:,0], key=lambda x:abs(x-normData))  # Finds closest element to x
+                where = np.where(frame_data[:,0] == closeVal)  # Finds index
+                fluct = frame_data[where, 1]
+                fluct = fluct[0][0]
+                x_values.append(frame_data[:,0])
+                y_frame = frame_data[:,1] / fluct
+                y_values.append(y_frame)
+                min_val.append(frame_data[0,0])
+                max_val.append(frame_data[-1,0])
+
+            else:
+                closeVal = min(frame_data[:,0], key=lambda x:abs(x-seq))
+                x_values.append(frame_data[:,0])
+                y_values.append(frame_data[:,1])
+                min_val.append(frame_data[0,0])
+                max_val.append(frame_data[-1,0])
 
             lendat2 = len(y_values[index])
             index += 1
@@ -300,6 +326,7 @@ if load_dict:
     print '{0:12s} {1} {2}'.format('gen_fq_file', '= ', dict['gen_fq_file'])
     print '{0:12s} {1} {2}'.format('gen_iq_file', '= ', dict['gen_iq_file'])
     print '{0:12s} {1} {2}'.format('Nyquist', '= ', dict['Nyquist'])
+    print '{0:12s} {1} {2}'.format('norm', '= ', dict['norm'])
 
     print '\n[Data]'
     print '{0:12s} {1} {2}'.format('file_name', '= ', dict['file_name'])
@@ -373,6 +400,7 @@ elif timeResCon:
     dict['gen_fq_file'] = parser.getboolean('Main', 'gen_fq_file')
     dict['gen_iq_file'] = parser.getboolean('Main', 'gen_iq_file')
     dict['Nyquist']     = parser.getboolean('Main', 'Nyquist')
+    dict['norm']        = parser.getfloat('Main', 'norm')
 
     # [Data]
     dict['file_name']   = parser.get('Data', 'file_name')
@@ -440,6 +468,8 @@ else:
     dict['gen_fq_file'] = True
     dict['gen_iq_file'] = True
     dict['Nyquist']     = True
+    dict['norm']        = -1
+
     # [Data]
     dict['file_name']   = 'BA_WCl6_160_p-'                                                                      #Starting name of files you want inported, e.g. 'BA_WCl6_200-', full name 'BA_WCl6_200-00001'.
     dict['file_type']   = '.xy'                                                                                 #Type of file you want imported. Remember '.' in front, e.g. '.xy' 
@@ -562,6 +592,10 @@ if dict['sumstep'] * dict['bg_info'][-1] > dict['sumstep_bg'] * dict['nr_files']
     print 'Reconsider the number of input files and how they are summed!\n'
     error = 1
 
+if dict['norm'] < 0.0 and dict['norm'] != -1:
+    print 'norm is {} it should be either -1.0, zero or above zero.'.format(dict['norm'])
+    error = 1
+
 if error == 1:
     print 'THE PROGRAM HAS BEEN TERMINATED!!!'
     sys.exit()
@@ -626,6 +660,80 @@ totime = dict['timeframe']/60
 
 #---------------------------------------------------------------------------------------------------
 #   
+# Cfg
+#
+#---------------------------------------------------------------------------------------------------
+
+if dict['make_cfg'] and load_dict == False:
+    # Values for autogen sfg
+    cfg_name    = str(dict['cfg_file'])
+
+    dataformat  = 'QA'
+    outputtypes = 'iq, sq, fq, gr'
+    composition = 'W Cl6'
+
+    qmaxinst    = 19.0
+    qmin        = 0.8
+    qmax        = 15.0
+
+    rmin        = 0.0
+    rmax        = 30.0
+    rstep       = 0.01
+
+    rpoly = 0.9
+    
+    print '\nNew cfg file has been created'
+    os.chdir(dict['cfg_dir'])
+    print 'Directory has been changed:'
+    print os.getcwd()
+    NAMES  = np.array(['[DEFAULT]','dataformat', 'outputtypes', 'composition', 'qmaxinst', 'qmin', 'qmax', 'rmin', 'rmax', 'rstep', 'rpoly'])
+    FLOATS = np.array(['',dataformat, outputtypes, composition, qmaxinst, qmin, qmax, rmin, rmax, rstep, rpoly])
+    DAT =  np.column_stack((NAMES, FLOATS))
+    np.savetxt(cfg_name, DAT, delimiter=" = ", fmt="%s") 
+    print str(dict['cfg_file'])
+    sys.exit()
+
+elif dict['PDF']:
+    print '\nCfg file is being importet.'
+    print '\t Values are needed for computation!!!'
+    os.chdir(dict['cfg_dir'])
+    print 'Directory has been changed:'
+    print os.getcwd()
+    
+    cfg = loadPDFConfig(dict['cfg_file'])
+    
+    if cfg.dataformat == 'Qnm':
+        th_q_low  = cfg.qmin * 10
+        th_q_high = cfg.qmax * 10
+        if dict['norm'] == 0:
+            dict['norm'] = cfg.qmax*10
+        else:
+            dict['norm'] = dict['norm'] * 10
+    else:
+        th_q_low  = cfg.qmin
+        th_q_high = cfg.qmax
+        if dict['norm'] == 0:
+            dict['norm'] == cfg.qmax
+
+else:
+    print 'Lowest q (in AA) value that will be tested for negative values:'
+    while True:
+        th_q_low  = input()
+        if type(th_q_low) is not float:
+            print "Answer needs to be a float"
+        else:
+            break
+
+    print 'Highest q value (in AA) that will be tested for negative values:'
+    while True:
+        th_q_high  = input()
+        if type(th_q_high) is not float:
+            print "Answer needs to be a float"
+        else:
+            break
+
+#---------------------------------------------------------------------------------------------------
+#   
 # Import Data and Construct Arrays
 #
 #---------------------------------------------------------------------------------------------------
@@ -658,31 +766,58 @@ elif dict['make_cfg'] == False:
         os.chdir(dict['data_dir'])
         print 'Directory has been changed:'
         print os.getcwd()
-        xdata_set, ydata_set, data_dim, min_val_data, max_val_data, data_len, data_name = read_data(dict['first_file'], dict['nr_files'], dict['file_name'], dict['file_type'], dict['line_skip'], 'Data files')
-        print data_len 
-        os.chdir(dict['bg_dir'])
-        print 'Directory has been changed:'
-        print os.getcwd()
-        xbg_set, ybg_set, bg_dim, min_val_bg, max_val_bg, bg_len, bg_name = read_data(dict['first_bg'], dict['nr_bg_files'], dict['bg_file'], dict['bg_type'], dict['bgline_skip'], 'Background files')  
+        if dict['norm'] == -1:  # Do not normalize data
+            xdata_set, ydata_set, data_dim, min_val_data, max_val_data, data_len, data_name = read_data(dict['first_file'], dict['nr_files'], dict['file_name'], dict['file_type'], dict['line_skip'], 'Data files')     
+            os.chdir(dict['bg_dir'])
+            print 'Directory has been changed:'
+            print os.getcwd()
+            xbg_set, ybg_set, bg_dim, min_val_bg, max_val_bg, bg_len, bg_name = read_data(dict['first_bg'], dict['nr_bg_files'], dict['bg_file'], dict['bg_type'], dict['bgline_skip'], 'Background files')  
 
+        elif dict['norm'] == 0:  # Data is normalized with th_q_high
+            xdata_set, ydata_set, data_dim, min_val_data, max_val_data, data_len, data_name = read_data(dict['first_file'], dict['nr_files'], dict['file_name'], dict['file_type'], dict['line_skip'], 'Data files', normData=dict['norm'])
+     
+            os.chdir(dict['bg_dir'])
+            print 'Directory has been changed:'
+            print os.getcwd()
+            xbg_set, ybg_set, bg_dim, min_val_bg, max_val_bg, bg_len, bg_name = read_data(dict['first_bg'], dict['nr_bg_files'], dict['bg_file'], dict['bg_type'], dict['bgline_skip'], 'Background files', normData=dict['norm'])  
+        elif dict['norm'] > 0:  # Data is normalized with userinput
+            xdata_set, ydata_set, data_dim, min_val_data, max_val_data, data_len, data_name = read_data(dict['first_file'], dict['nr_files'], dict['file_name'], dict['file_type'], dict['line_skip'], 'Data files', normData = dict['norm'])
+     
+            os.chdir(dict['bg_dir'])
+            print 'Directory has been changed:'
+            print os.getcwd()
+            xbg_set, ybg_set, bg_dim, min_val_bg, max_val_bg, bg_len, bg_name = read_data(dict['first_bg'], dict['nr_bg_files'], dict['bg_file'], dict['bg_type'], dict['bgline_skip'], 'Background files', normData = dict['norm'])  
+ 
     else:
-        os.chdir(dict['data_dir'])
-        print 'Directory has been changed:'
-        print os.getcwd()     
-        xdata_set, ydata_set, data_dim, min_val_data, max_val_data, data_len, data_name = read_data(dict['first_file'], dict['nr_files'], dict['file_name'], dict['file_type'], dict['line_skip'], 'Data files')
-          
-        os.chdir(dict['bg_dir'])
-        print 'Directory has been changed:'
-        print os.getcwd()
-        xbg_set, ybg_set, bg_dim, min_val_bg, max_val_bg, bg_len, bg_name = read_data(dict['first_bg'], dict['bg_info'], dict['bg_file'], dict['bg_type'], dict['bgline_skip'], 'Background files', seq=False)  
-   
+        if dict['norm'] == -1:  # Do not normalize data
+            xdata_set, ydata_set, data_dim, min_val_data, max_val_data, data_len, data_name = read_data(dict['first_file'], dict['nr_files'], dict['file_name'], dict['file_type'], dict['line_skip'], 'Data files')     
+            os.chdir(dict['bg_dir'])
+            print 'Directory has been changed:'
+            print os.getcwd()
+            xbg_set, ybg_set, bg_dim, min_val_bg, max_val_bg, bg_len, bg_name = read_data(dict['first_bg'], dict['nr_bg_files'], dict['bg_file'], dict['bg_type'], dict['bgline_skip'], 'Background files', seq=False)  
+
+        elif dict['norm'] == 0:  # Data is normalized with th_q_high
+            xdata_set, ydata_set, data_dim, min_val_data, max_val_data, data_len, data_name = read_data(dict['first_file'], dict['nr_files'], dict['file_name'], dict['file_type'], dict['line_skip'], 'Data files', normData=dict['norm'])
+     
+            os.chdir(dict['bg_dir'])
+            print 'Directory has been changed:'
+            print os.getcwd()
+            xbg_set, ybg_set, bg_dim, min_val_bg, max_val_bg, bg_len, bg_name = read_data(dict['first_bg'], dict['nr_bg_files'], dict['bg_file'], dict['bg_type'], dict['bgline_skip'], 'Background files', seq=False, normData=dict['norm'])  
+        elif dict['norm'] > 0:  # Data is normalized with userinput
+            xdata_set, ydata_set, data_dim, min_val_data, max_val_data, data_len, data_name = read_data(dict['first_file'], dict['nr_files'], dict['file_name'], dict['file_type'], dict['line_skip'], 'Data files', normData=dict['norm'])
+     
+            os.chdir(dict['bg_dir'])
+            print 'Directory has been changed:'
+            print os.getcwd()
+            xbg_set, ybg_set, bg_dim, min_val_bg, max_val_bg, bg_len, bg_name = read_data(dict['first_bg'], dict['nr_bg_files'], dict['bg_file'], dict['bg_type'], dict['bgline_skip'], 'Background files',seq=False, normData=dict['norm'])  
+     
     if bg_len > data_len:
         steps = bg_len * 2
     elif bg_len < data_len:
         steps = data_len * 2
     else:
         steps = data_len*2  # Data_len
-
+    
     if dict['data_magic']:  # Find highest min value and lowest max value for interpolation
         xmin = 0
         xmax = 0
@@ -844,12 +979,13 @@ elif dict['make_cfg'] == False:
         ybg_set = np.reshape(ybg_set, (len(ybg_set), steps))
 
     if dict['nr_files'] > dict['nr_bg_files'] and dict['seq_bg'] == False:  # If there are less background files the data files exstend bg matrix with last background row til they match
+    
         add_bgy = ybg_set[-1]
         add_bgy = np.reshape(add_bgy, (1, steps))
 
         print '\n', 'Extending background matrix:' 
         for i in tqdm(range(dict['nr_files'] - dict['nr_bg_files'])):
-           ybg_set = np.concatenate((ybg_set, add_bgy), axis = 0)
+           ybg_set = np.concatenate((ybg_set, add_bgy), axis = 0)    
     
 if dict['save_data'] and dict['make_cfg'] == False:
     print '\nSaving data!'
@@ -865,74 +1001,6 @@ if dict['save_data'] and dict['make_cfg'] == False:
     hdf5_data.create_dataset('ybgdata', data=ybg_set)   
 
     hdf5_data.close()   
-
-#---------------------------------------------------------------------------------------------------
-#   
-# Cfg
-#
-#---------------------------------------------------------------------------------------------------
-
-if dict['make_cfg'] and load_dict == False:
-    # Values for autogen sfg
-    cfg_name    = str(dict['cfg_file'])
-
-    dataformat  = 'QA'
-    outputtypes = 'iq, sq, fq, gr'
-    composition = 'W Cl6'
-
-    qmaxinst    = 19.0
-    qmin        = 0.8
-    qmax        = 15.0
-
-    rmin        = 0.0
-    rmax        = 30.0
-    rstep       = 0.01
-
-    rpoly = 0.9
-    
-    print '\nNew cfg file has been created'
-    os.chdir(dict['cfg_dir'])
-    print 'Directory has been changed:'
-    print os.getcwd()
-    NAMES  = np.array(['[DEFAULT]','dataformat', 'outputtypes', 'composition', 'qmaxinst', 'qmin', 'qmax', 'rmin', 'rmax', 'rstep', 'rpoly'])
-    FLOATS = np.array(['',dataformat, outputtypes, composition, qmaxinst, qmin, qmax, rmin, rmax, rstep, rpoly])
-    DAT =  np.column_stack((NAMES, FLOATS))
-    np.savetxt(cfg_name, DAT, delimiter=" = ", fmt="%s") 
-    print str(dict['cfg_file'])
-    sys.exit()
-
-elif dict['PDF']:
-    print '\nCfg file is being importet.'
-    print '\t Values are needed for computation!!!'
-    os.chdir(dict['cfg_dir'])
-    print 'Directory has been changed:'
-    print os.getcwd()
-    
-    cfg = loadPDFConfig(dict['cfg_file'])
-    
-    if cfg.dataformat == 'Qnm':
-        th_q_low  = cfg.qmin * 10
-        th_q_high = cfg.qmax * 10
-    else:
-        th_q_low  = cfg.qmin
-        th_q_high = cfg.qmax
-
-else:
-    print 'Lowest q (in AA) value that will be tested for negative values:'
-    while True:
-        th_q_low  = input()
-        if type(th_q_low) is not float:
-            print "Answer needs to be a float"
-        else:
-            break
-
-    print 'Highest q value (in AA) that will be tested for negative values:'
-    while True:
-        th_q_high  = input()
-        if type(th_q_high) is not float:
-            print "Answer needs to be a float"
-        else:
-            break
 
 #---------------------------------------------------------------------------------------------------
 #   
@@ -965,12 +1033,12 @@ if dict['calib_bg']:
             scan_ph = 1  # Search til it finds a value within qmin and qmax
             i       = 0 
             while scan_ph == 1:
-
                 if th_q_low < xdata_set[diff_index[i]] and th_q_high > xdata_set[diff_index[i]] and li1[diff_index[i]] != 0:
-                    scale_ph = (li1[diff_index[i]] / li2[diff_index[i]]+0.00001) * 0.99  # Scales the background a bit further down
+                    scale_ph = (li1[diff_index[i]] / li2[diff_index[i]]+0.00001) * dict['bg_scaling']  # Scales the background a bit further down
                     scan_ph = 0
-                elif i == 1000:
-                    print "Check data file! 1000 values are equal to 0."
+                elif i == 100000:
+                    print "Could not find proper scaling within the range of {}-{}.".format(th_q_low, th_q_high)
+                    print '100000 iterations were ran.' 
                     sys.exit()               
                 else:
                     i += 1
@@ -1031,7 +1099,7 @@ else:
             i       = 0 
             while scan_ph == 1:
                 if th_q_low < xdata_set[diff_index[i]] and th_q_high > xdata_set[diff_index[i]] and li1[diff_index[i]] != 0:
-                    scale = (li1[diff_index[i]] / li2[diff_index[i]]+0.00001) * 0.99  # Scales the background a bit further down
+                    scale = (li1[diff_index[i]] / li2[diff_index[i]]+0.00001) * dict['bg_scaling']  # Scales the background a bit further down
                      
                     scan_ph = 0
                 
