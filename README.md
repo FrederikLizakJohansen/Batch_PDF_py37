@@ -1,7 +1,10 @@
 # Batch_PDF
 
 Fork based on python 2.7 implementation: https://github.com/EmilSkaaning/Batch_PDF
+
 Updated to work for python 3.7
+
+NOT FULLY IMPLEMENTED YET, WIP
 
 ---
 

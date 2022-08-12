@@ -12,6 +12,10 @@ Please see
   Institute:    University of Copenhagen
   Date:         03/01/2019
   ----------------------------------------------------------------------
+
+// Updated version: Frederik Lizak Johansen (frjo@di.ku.dk)
+// Date: 12/08/2022
+
 """
 import os
 import time
@@ -110,8 +114,8 @@ def pic_dir(owd, folder_name):
         os.makedirs(dir_path)
 
     os.chdir(dir_path)
-    print 'Directory has been changed:'
-    print os.getcwd()   
+    print('Directory has been changed:')
+    print(os.getcwd())
 
 def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip, load_str, seq=True, normData=-1):
     """
@@ -125,7 +129,7 @@ def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip, load_st
     dim      = 1
     lendat1  = 0
     if seq == True:
-        print 'Loading '+str(load_str)+':'
+        print('Loading '+str(load_str)+':')
         for i in tqdm(range(frame_sumstart, frame_sumstart + nr_files)):
             frame = file_name + str.zfill(str(i), 5) + str(file_type)
             names.append(frame)
@@ -154,7 +158,7 @@ def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip, load_st
                 lendat1 = lendat2
 
     else:
-        print 'Loading '+str(load_str)+':'
+        print('Loading '+str(load_str)+':')
         index = 0
         for i in tqdm(range(0, len(nr_files), 2)):  # Takes every second element in list
             frame = file_name + str.zfill(str(nr_files[i]), 5) + str(file_type)
@@ -184,7 +188,7 @@ def read_data(frame_sumstart, nr_files, file_name, file_type, line_skip, load_st
                 lendat1 = lendat2
                 
     if not all(len(i) == len(x_values[0]) for i in x_values):
-        print ('Not all lists have same length! You must have used Dioptas ...')
+        print('Not all lists have same length! You must have used Dioptas ...')
     else:
         x_values = x_values[0]
         dim = 0
@@ -254,7 +258,7 @@ def sum_data(nr_sum, sumstep, data):
         sum_mat.append(np.sum(data[int(placeholder - sumstep):int(placeholder)], axis=0))
         
         if placeholder == summing * sumstep and constant != sumstep:
-            print 'WARNING!!! Could not sum frames in pairs of ' + str(sumstep) + '. To correct for this, the intensity of last data set is multiplied by ' + str(constant+1) + ' in the last frame.' 
+            print('WARNING!!! Could not sum frames in pairs of ' + str(sumstep) + '. To correct for this, the intensity of last data set is multiplied by ' + str(constant+1) + ' in the last frame.')
             last_mat = data[placeholder::][0::]
             exstend_mat = data[-1::][0::]
 
@@ -305,12 +309,12 @@ else:
     load_dict  = False
     timeResCon = False
     imp_dict   = 'Batch_PDF_directory.py'
-    print "No Batch_PDF_config.ini exists within current working directory!"
-    print "Looking for directory name Batch_PDF_directory."  # XXXXXX
+    print("No Batch_PDF_config.ini exists within current working directory!")
+    print("Looking for directory name Batch_PDF_directory.")
     if load_dict:
-        print 'Script is using an imported dictionary!'
+        print('Script is using an imported dictionary!')
     else:
-        print 'Neither a config file og dictionary was imported. Script should be setup in main code!!!'
+        print('Neither a config file og dictionary was imported. Script should be setup in main code!!!')
 
 #---------------------------------------------------------------------------------------------------
 #   
@@ -322,8 +326,8 @@ if load_dict:
     true0      = True
     true1      = True
     dictLoaded = True
-    print 'Current directory:'
-    print '\t',os.getcwd(), '\n'
+    print('Current directory:')
+    print('\t',os.getcwd(), '\n')
     while true0:
         while true1:
             user_input = raw_input("Enter the path to dictionary: ")
@@ -331,80 +335,80 @@ if load_dict:
                 os.chdir(str(user_input))
                 true1 = False
             except:
-                print user_input
-                print 'Directory not found!'
-            print '\t'
+                print(user_input)
+                print('Directory not found!')
+            print('\t')
         try:
             dict = pickle.load(open(imp_dict, "rb"))
             true0 = False
         except:
-            print str(imp_dict)+'not found\n'
+            print(str(imp_dict)+'not found\n')
             true1 = True
 
-    print '\n' + 'Printing values for imported Dictionary: ' + '\n'
+    print('\n' + 'Printing values for imported Dictionary: ' + '\n')
 
-    print '[Main]'
-    print '{0:12s} {1} {2}'.format('load_data', '= ', dict['load_data'])
-    print '{0:12s} {1} {2}'.format('data_magic', '= ', dict['data_magic'])
-    print '{0:12s} {1} {2}'.format('save_data', '= ', dict['save_data'])
-    print '{0:12s} {1} {2}'.format('PDF', '= ', dict['PDF'])
-    print '{0:12s} {1} {2}'.format('gen_PDF_file', '= ', dict['gen_PDF_file'])
-    print '{0:12s} {1} {2}'.format('gen_fq_file', '= ', dict['gen_fq_file'])
-    print '{0:12s} {1} {2}'.format('gen_iq_file', '= ', dict['gen_iq_file'])
-    print '{0:12s} {1} {2}'.format('Nyquist', '= ', dict['Nyquist'])
-    print '{0:12s} {1} {2}'.format('norm', '= ', dict['norm'])
+    print('[Main]')
+    print('{0:12s} {1} {2}'.format('load_data', '= ', dict['load_data']))
+    print('{0:12s} {1} {2}'.format('data_magic', '= ', dict['data_magic']))
+    print('{0:12s} {1} {2}'.format('save_data', '= ', dict['save_data']))
+    print('{0:12s} {1} {2}'.format('PDF', '= ', dict['PDF']))
+    print('{0:12s} {1} {2}'.format('gen_PDF_file', '= ', dict['gen_PDF_file']))
+    print('{0:12s} {1} {2}'.format('gen_fq_file', '= ', dict['gen_fq_file']))
+    print('{0:12s} {1} {2}'.format('gen_iq_file', '= ', dict['gen_iq_file']))
+    print('{0:12s} {1} {2}'.format('Nyquist', '= ', dict['Nyquist']))
+    print('{0:12s} {1} {2}'.format('norm', '= ', dict['norm']))
 
-    print '\n[Data]'
-    print '{0:12s} {1} {2}'.format('file_name', '= ', dict['file_name'])
-    print '{0:12s} {1} {2}'.format('file_type', '= ', dict['file_type'])
-    print '{0:12s} {1} {2}'.format('first_file', '= ', dict['first_file'])
-    print '{0:12s} {1} {2}'.format('nr_files', '= ', dict['nr_files'])
-    print '{0:12s} {1} {2}'.format('line_skip', '= ', dict['line_skip'])
+    print('\n[Data]')
+    print('{0:12s} {1} {2}'.format('file_name', '= ', dict['file_name']))
+    print('{0:12s} {1} {2}'.format('file_type', '= ', dict['file_type']))
+    print('{0:12s} {1} {2}'.format('first_file', '= ', dict['first_file']))
+    print('{0:12s} {1} {2}'.format('nr_files', '= ', dict['nr_files']))
+    print('{0:12s} {1} {2}'.format('line_skip', '= ', dict['line_skip']))
 
-    print '\n[Background_Data]'
-    print '{0:12s} {1} {2}'.format('bg_file', '= ', dict['bg_file'])
-    print '{0:12s} {1} {2}'.format('bg_type', '= ', dict['bg_type'])
-    print '{0:12s} {1} {2}'.format('first_bg', '= ', dict['first_bg'])
-    print '{0:12s} {1} {2}'.format('nr_bg_files', '= ', dict['nr_bg_files'])
-    print '{0:12s} {1} {2}'.format('bgline_skip', '= ', dict['bgline_skip'])
-    print '{0:12s} {1} {2}'.format('seq_bg', '= ', dict['seq_bg'])
-    print '{0:12s} {1} {2}'.format('bg_info', '= ', dict['bg_info'])
+    print('\n[Background_Data]')
+    print('{0:12s} {1} {2}'.format('bg_file', '= ', dict['bg_file']))
+    print('{0:12s} {1} {2}'.format('bg_type', '= ', dict['bg_type']))
+    print('{0:12s} {1} {2}'.format('first_bg', '= ', dict['first_bg']))
+    print('{0:12s} {1} {2}'.format('nr_bg_files', '= ', dict['nr_bg_files']))
+    print('{0:12s} {1} {2}'.format('bgline_skip', '= ', dict['bgline_skip']))
+    print('{0:12s} {1} {2}'.format('seq_bg', '= ', dict['seq_bg']))
+    print('{0:12s} {1} {2}'.format('bg_info', '= ', dict['bg_info']))
 
-    print '\n[Scaling]'
-    print '{0:12s} {1} {2}'.format('calib_bg', '= ', dict['calib_bg'])
-    print '{0:12s} {1} {2}'.format('auto', '= ', dict['auto'])
-    print '{0:12s} {1} {2}'.format('sumstep', '= ', dict['sumstep'])
-    print '{0:12s} {1} {2}'.format('sumstep_bg', '= ', dict['sumstep_bg'])
-    print '{0:12s} {1} {2}'.format('bg_scaling', '= ', dict['bg_scaling'])
-    print '{0:12s} {1} {2}'.format('qnorm', '= ', dict['qnorm'])
+    print('\n[Scaling]')
+    print('{0:12s} {1} {2}'.format('calib_bg', '= ', dict['calib_bg']))
+    print('{0:12s} {1} {2}'.format('auto', '= ', dict['auto']))
+    print('{0:12s} {1} {2}'.format('sumstep', '= ', dict['sumstep']))
+    print('{0:12s} {1} {2}'.format('sumstep_bg', '= ', dict['sumstep_bg']))
+    print('{0:12s} {1} {2}'.format('bg_scaling', '= ', dict['bg_scaling']))
+    print('{0:12s} {1} {2}'.format('qnorm', '= ', dict['qnorm']))
 
-    print '\n[Directories]'
-    print '{0:12s} {1} {2}'.format('data_dir', '= ', dict['data_dir'])
-    print '{0:12s} {1} {2}'.format('bg_dir', '= ', dict['bg_dir'])
-    print '{0:12s} {1} {2}'.format('cfg_dir', '= ', dict['cfg_dir'])
+    print('\n[Directories]')
+    print('{0:12s} {1} {2}'.format('data_dir', '= ', dict['data_dir']))
+    print('{0:12s} {1} {2}'.format('bg_dir', '= ', dict['bg_dir']))
+    print('{0:12s} {1} {2}'.format('cfg_dir', '= ', dict['cfg_dir']))
 
-    print '\n[PDFgetX3]'
-    print '{0:12s} {1} {2}'.format('make_cfg', '= ', dict['make_cfg'])
-    print '{0:12s} {1} {2}'.format('cfg_file', '= ', dict['cfg_file'])
+    print('\n[PDFgetX3]')
+    print('{0:12s} {1} {2}'.format('make_cfg', '= ', dict['make_cfg']))
+    print('{0:12s} {1} {2}'.format('cfg_file', '= ', dict['cfg_file']))
 
-    print '\n[Plotting]'
-    print '{0:12s} {1} {2}'.format('show_PDF', '= ', dict['show_PDF'])
-    print '{0:12s} {1} {2}'.format('show_all', '= ', dict['show_all'])
-    print '{0:12s} {1} {2}'.format('save_pics', '= ', dict['save_pics'])
-    print '{0:12s} {1} {2}'.format('pdf_file', '= ', dict['pdf_file'])
-    print '{0:12s} {1} {2}'.format('timeframe', '= ', dict['timeframe'])
+    print('\n[Plotting]')
+    print('{0:12s} {1} {2}'.format('show_PDF', '= ', dict['show_PDF']))
+    print('{0:12s} {1} {2}'.format('show_all', '= ', dict['show_all']))
+    print('{0:12s} {1} {2}'.format('save_pics', '= ', dict['save_pics']))
+    print('{0:12s} {1} {2}'.format('pdf_file', '= ', dict['pdf_file']))
+    print('{0:12s} {1} {2}'.format('timeframe', '= ', dict['timeframe']))
 
-    print '\n[3D_Plot]'
-    print '{0:12s} {1} {2}'.format('3D_plot', '= ', dict['3D_plot'])
-    print '{0:12s} {1} {2}'.format('3D_title', '= ', dict['3D_title'])
-    print '{0:12s} {1} {2}'.format('3D_cmap', '= ', dict['3D_cmap'])
+    print('\n[3D_Plot]')
+    print('{0:12s} {1} {2}'.format('3D_plot', '= ', dict['3D_plot']))
+    print('{0:12s} {1} {2}'.format('3D_title', '= ', dict['3D_title']))
+    print('{0:12s} {1} {2}'.format('3D_cmap', '= ', dict['3D_cmap']))
 
-    print '\nThe sections [Dictionary] and [Save_Dictionary] are not stored within the Dictionary!'
+    print('\nThe sections [Dictionary] and [Save_Dictionary] are not stored within the Dictionary!')
 
     if yesno('Do you agree with imported dictionary?') == False:
         sys.exit()
 
-    print "Imported Dictionary has been verfied. Proceeding!"
+    print("Imported Dictionary has been verfied. Proceeding!")
     save_dict = False
 
 elif timeResCon:
@@ -553,74 +557,74 @@ error = 0
 
 if dict['seq_bg'] and dict['make_cfg'] == False and dict['sumstep_bg'] == 1 and dict['sumstep'] == 1:
     if dict['bg_info'][1] != 1:
-        print 'bg_info is wrong!'
-        print 'Second element needs to be 1 but is ' + str(dict['bg_info'][1]) + '!\n' 
+        print('bg_info is wrong!')
+        print('Second element needs to be 1 but is ' + str(dict['bg_info'][1]) + '!\n')
         error = 1
 
     if dict['bg_info'][-1] > dict['first_file'] + dict['nr_files']:
-        print 'bg_info is wrong!'
-        print str(dict['bg_info'][-1]) + ' is larger than ' + str(dict['first_file'] + dict['nr_files'])
+        print('bg_info is wrong!')
+        print(str(dict['bg_info'][-1]) + ' is larger than ' + str(dict['first_file'] + dict['nr_files']))
         error = 1
 
     if len(dict['bg_info']) % 2 != 0:
-        print 'bg_info is wrong!'
-        print 'The length needs to be even but is currently ' + str(len(dict['bg_info'])) + '!\n'
+        print('bg_info is wrong!')
+        print('The length needs to be even but is currently ' + str(len(dict['bg_info'])) + '!\n')
         error = 1
     
     j = 1
     for i in range(1, len(dict['bg_info']), 2):
         if dict['bg_info'][i] < dict['bg_info'][j]:
-            print 'bg_info is wrong!'
-            print str(dict['bg_info'][i]) + ' must be larger than ' + str(dict['bg_info'][j]) + '!\n'
+            print('bg_info is wrong!')
+            print(str(dict['bg_info'][i]) + ' must be larger than ' + str(dict['bg_info'][j]) + '!\n')
             error = 1
         j = i
 
 if dict['nr_bg_files'] > dict['nr_files'] and dict['sumstep_bg'] > 1 and dict['seq_bg'] == False:  # Checking that the user do not have more bg files than data files
-    print 'You can not have more background files than'
+    print('You can not have more background files than')
     error = 1
 
 if dict['sumstep'] > dict['nr_files'] or dict['sumstep_bg'] > dict['nr_bg_files'] and dict['seq_bg'] == False:  # Checking that the user dont sum more files than given
-    print 'You can not sum more files then you have!'
-    print '\t Data: summing ', dict['sumstep'], ' files, you gave ', dict['nr_files']
-    print '\t Background: summing ', dict['sumstep_bg'], ' files, you gave ', dict['nr_bg_files'], '\n' 
+    print('You can not sum more files then you have!')
+    print('\t Data: summing ', dict['sumstep'], ' files, you gave ', dict['nr_files'])
+    print('\t Background: summing ', dict['sumstep_bg'], ' files, you gave ', dict['nr_bg_files'], '\n')
     error = 1
 
 if dict['nr_files'] % dict['sumstep'] != 0 and dict['nr_bg_files'] % dict['sumstep_bg'] != 0 and dict['seq_bg'] == False:  # Checking dimensions of data and background after summation 
     if (dict['nr_files'] / dict['sumstep'])+1 < (dict['nr_bg_files'] / dict['sumstep_bg'])+1:
-        print 'After summation you have more background files than data files!'
-        print '\t', 'Data < Background'
-        print '\t',(dict['nr_files'] / dict['sumstep'])+1,' < ',(dict['nr_bg_files'] / dict['sumstep_bg'])+1,'\n'  
+        print('After summation you have more background files than data files!')
+        print('\t', 'Data < Background')
+        print('\t',(dict['nr_files'] / dict['sumstep'])+1,' < ',(dict['nr_bg_files'] / dict['sumstep_bg'])+1,'\n')
         error = 1
 elif dict['nr_files'] % dict['sumstep'] == 0 and dict['nr_bg_files'] % dict['sumstep_bg'] != 0 and dict['seq_bg'] == False:
     if (dict['nr_files'] / dict['sumstep']) < (dict['nr_bg_files'] / dict['sumstep_bg'])+1:
-        print 'After summation you have more background files than data files!'
-        print '\t', 'Data < Background'
-        print '\t',(dict['nr_files'] / dict['sumstep']),' < ',(dict['nr_bg_files'] / dict['sumstep_bg'])+1,'\n'  
+        print('After summation you have more background files than data files!')
+        print('\t', 'Data < Background')
+        print('\t',(dict['nr_files'] / dict['sumstep']),' < ',(dict['nr_bg_files'] / dict['sumstep_bg'])+1,'\n')
         error = 1
 elif dict['nr_files'] % dict['sumstep'] != 0 and dict['nr_bg_files'] % dict['sumstep_bg'] == 0 and dict['seq_bg'] == False:
     if (dict['nr_files'] / dict['sumstep'])+1 < (dict['nr_bg_files'] / dict['sumstep_bg']):
-        print 'After summation you have more background files than data files!'
-        print '\t', 'Data < Background'       
-        print '\t',(dict['nr_files'] / dict['sumstep'])+1,' < ',(dict['nr_bg_files'] / dict['sumstep_bg']),'\n'  
+        print('After summation you have more background files than data files!')
+        print('\t', 'Data < Background')
+        print('\t',(dict['nr_files'] / dict['sumstep'])+1,' < ',(dict['nr_bg_files'] / dict['sumstep_bg']),'\n')
         error = 1
 else:
      if (dict['nr_files'] / dict['sumstep']) < (dict['nr_bg_files'] / dict['sumstep_bg']) and dict['seq_bg'] == False:
-        print 'After summation you have more background files than data files!'
-        print '\t', 'Data < Background'       
-        print '\t',(dict['nr_files'] / dict['sumstep']),' < ',(dict['nr_bg_files'] / dict['sumstep_bg']),'\n'  
+        print('After summation you have more background files than data files!')
+        print('\t', 'Data < Background')
+        print('\t',(dict['nr_files'] / dict['sumstep']),' < ',(dict['nr_bg_files'] / dict['sumstep_bg']),'\n') 
         error = 1
 
 if dict['sumstep'] * dict['bg_info'][-1] > dict['sumstep_bg'] * dict['nr_files'] and dict['seq_bg']:
-    print 'Background files exeed data files after summation!'
-    print 'Reconsider the number of input files and how they are summed!\n'
+    print('Background files exeed data files after summation!')
+    print('Reconsider the number of input files and how they are summed!\n')
     error = 1
 
 if dict['norm'] < 0.0 and dict['norm'] != -1:
-    print 'norm is {} it should be either -1.0, zero or above zero.'.format(dict['norm'])
+    print('norm is {} it should be either -1.0, zero or above zero.'.format(dict['norm']))
     error = 1
 
 if error == 1:
-    print 'THE PROGRAM HAS BEEN TERMINATED!!!'
+    print('THE PROGRAM HAS BEEN TERMINATED!!!')
     sys.exit()
 
 #---------------------------------------------------------------------------------------------------
@@ -656,22 +660,22 @@ if save_dict and dict['make_cfg'] == False:
     exists[6] = dir_check(dict['cfg_dir'], folderName='Figures', fileName=dict_name+'.py', folder=False)
 
 if np.sum(exists) > 0:
-    print 'Already existing:'
+    print('Already existing:')
     if exists[0] == 1:
-        print '\tDataBinary'
+        print('\tDataBinary')
     if exists[1] == 1:
-        print '\tGr_'+str(prettyName)
+        print('\tGr_'+str(prettyName))
     if exists[2] == 1:
-        print '\tFq_'+str(prettyName)
+        print('\tFq_'+str(prettyName))
     if exists[3] == 1:
-        print '\tIq_'+str(prettyName)
+        print('\tIq_'+str(prettyName))
     if exists[4] == 1:
-        print '\t'+dict['cfg_file']
+        print('\t'+dict['cfg_file'])
     if exists[5] == 1:
-        print '\tFigures'
+        print('\tFigures')
     if exists[6] == 1:
-        print '\t'+str(dict_name)
-    print '\nIt is possible that you are going to overwrite data!'
+        print('\t'+str(dict_name))
+    print('\nIt is possible that you are going to overwrite data!')
     if yesno('Do you want to continue?') == False:
         sys.exit()
 
@@ -707,23 +711,23 @@ if dict['make_cfg'] and load_dict == False:
 
     rpoly = 0.9
     
-    print '\nNew cfg file has been created'
+    print('\nNew cfg file has been created')
     os.chdir(dict['cfg_dir'])
-    print 'Directory has been changed:'
-    print os.getcwd()
+    print('Directory has been changed:')
+    print(os.getcwd())
     NAMES  = np.array(['[DEFAULT]','dataformat', 'outputtypes', 'composition', 'qmaxinst', 'qmin', 'qmax', 'rmin', 'rmax', 'rstep', 'rpoly'])
     FLOATS = np.array(['',dataformat, outputtypes, composition, qmaxinst, qmin, qmax, rmin, rmax, rstep, rpoly])
     DAT =  np.column_stack((NAMES, FLOATS))
     np.savetxt(cfg_name, DAT, delimiter=" = ", fmt="%s") 
-    print str(dict['cfg_file'])
+    print(str(dict['cfg_file']))
     sys.exit()
 
 elif dict['PDF']:
-    print '\nCfg file is being importet.'
-    print '\t Values are needed for computation!!!'
+    print('\nCfg file is being importet.')
+    print('\t Values are needed for computation!!!')
     os.chdir(dict['cfg_dir'])
-    print 'Directory has been changed:'
-    print os.getcwd()
+    print('Directory has been changed:')
+    print(os.getcwd())
     
     cfg = loadPDFConfig(dict['cfg_file'])
 
@@ -744,19 +748,19 @@ elif dict['PDF']:
             dict['norm'] == cfg.qmax
 
 else:
-    print 'Lowest q (in AA) value that will be tested for negative values:'
+    print('Lowest q (in AA) value that will be tested for negative values:')
     while True:
         th_q_low  = input()
         if type(th_q_low) is not float:
-            print "Answer needs to be a float"
+            print("Answer needs to be a float")
         else:
             break
 
-    print 'Highest q value (in AA) that will be tested for negative values:'
+    print('Highest q value (in AA) that will be tested for negative values:')
     while True:
         th_q_high  = input()
         if type(th_q_high) is not float:
-            print "Answer needs to be a float"
+            print("Answer needs to be a float")
         else:
             break
 
@@ -767,7 +771,7 @@ else:
 #---------------------------------------------------------------------------------------------------
 
 if dict['load_data'] == False and dict['make_cfg'] == False:
-    print '\nLoading HDF5 files:'
+    print('\nLoading HDF5 files:')
     pic_dir(dict['cfg_dir'], 'DataBinary')
     
     hdf5_file = h5py.File(str(prettyName)+'.hdf5', 'r')
