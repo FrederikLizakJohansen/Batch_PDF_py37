@@ -1,6 +1,11 @@
 # Batch_PDF
 
-Coverting total scattering data into PDF.
+Fork based on python 2.7 implementation: https://github.com/EmilSkaaning/Batch_PDF
+Updated to work for python 3.7
+
+---
+
+Converting total scattering data into PDF.
 
 The script consists of multiple part.
 
