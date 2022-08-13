@@ -37,6 +37,19 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
+
+#---------------------------------------------------------------------------------------------------
+#   
+# Additions
+#
+#---------------------------------------------------------------------------------------------------
+
+# Update the input function to work with python 3
+try:
+    raw_input = input
+except NameError:
+    pass
+
 #---------------------------------------------------------------------------------------------------
 #   
 # Functions
